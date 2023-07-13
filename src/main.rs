@@ -1,5 +1,6 @@
-use crate::geth::{JsonInfuraRpcParam, JsonRpcParam};
+use crate::geth::{JsonInfuraRpcParam, JsonRpcParam, JsonRpcResult, ResultRpc, ResultTypes, RpcResultTypes};
 use ethereum_tx_sign::Transaction;
+use ethereum_types::U256;
 
 mod config;
 mod geth;
@@ -35,7 +36,18 @@ fn main() {
     let result = geth
         .call("eth_call", geth::ParamTypes::Infura(params))
         .unwrap();
-    log::info!("{:?}", result);
+    match result.part {
+        RpcResultTypes::Error(_) => {}
+        RpcResultTypes::Result(ref r) => {
+            match &r.result{
+                ResultTypes::String(rs) => {
+                    log::info!("{:?}", U256::from_str_radix(rs, 16))
+                }
+                ResultTypes::TransactionReceipt(_) => {}
+                ResultTypes::Null => {}
+            }
+        }
+    }
 }
 
 fn sign() {

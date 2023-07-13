@@ -43,14 +43,6 @@ impl Client {
         }
     }
 
-    pub fn rpc(
-        &self,
-        method: &str,
-        params: ParamTypes,
-    ) -> Result<JsonRpcResult, Box<dyn std::error::Error>> {
-        self.call(method, params)
-    }
-
     pub fn last_block(&self) -> u32 {
         let blk_num_str = self
             .rpc_str("eth_blockNumber", ParamTypes::Single(("".to_string(),)))
