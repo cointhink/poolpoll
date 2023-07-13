@@ -1,8 +1,12 @@
 use serde::{Deserialize, Serialize};
+use std::sync::OnceLock;
+
+pub static CONFIG: OnceLock<Config> = OnceLock::new();
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
     pub private_key: String,
+    pub geth_url: String,
 }
 
 pub fn load(filename: &str) -> Config {

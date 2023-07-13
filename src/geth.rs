@@ -1,8 +1,8 @@
 use bs58;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error;
-use rand::Rng;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -169,6 +169,7 @@ pub fn ethgasstation() -> EthGasStationResult {
     let result = ureq::get(url).call().unwrap();
     result.into_json().unwrap()
 }
+
 pub fn ethgasstation_fast() -> u64 {
     let gas_prices = ethgasstation();
     (gas_prices.fast as f64 * 100_000_000u64 as f64) as u64
