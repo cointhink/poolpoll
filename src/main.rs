@@ -29,10 +29,7 @@ fn main() {
     let geth = geth::Client::build(&url);
     let mut tx = geth::JsonRpcParam::new();
 
-    tx.insert(
-        "to".to_string(),
-        UNISWAP_V2_FACTORY.to_string(),
-    );
+    tx.insert("to".to_string(), UNISWAP_V2_FACTORY.to_string());
     tx.insert("data".to_string(), format!("0x{}", hex::encode(data)));
     let params = (tx.clone(), Some("latest".to_string()));
     let result = geth
@@ -40,15 +37,13 @@ fn main() {
         .unwrap();
     match result.part {
         RpcResultTypes::Error(_) => {}
-        RpcResultTypes::Result(ref r) => {
-            match &r.result{
-                ResultTypes::String(rs) => {
-                    log::info!("{:?}", U256::from_str_radix(rs, 16))
-                }
-                ResultTypes::TransactionReceipt(_) => {}
-                ResultTypes::Null => {}
+        RpcResultTypes::Result(ref r) => match &r.result {
+            ResultTypes::String(rs) => {
+                log::info!("{:?}", U256::from_str_radix(rs, 16))
             }
-        }
+            ResultTypes::TransactionReceipt(_) => {}
+            ResultTypes::Null => {}
+        },
     }
 }
 

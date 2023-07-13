@@ -16,6 +16,7 @@ log4rs = "1.2.0"
 postgres = "0.19.5"
 rand = "0.8.5"
 refinery = { version = "0.8.10", features = ["postgres"] }
+rust_decimal = { version = "1.30.0", features = ["db-postgres", "tokio-pg"] }
 serde = "1.0.171"
 serde_json = "1.0.102"
 serde_yaml = "0.9.22"
