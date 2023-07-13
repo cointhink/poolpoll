@@ -1,18 +1,23 @@
-use crate::geth::{JsonInfuraRpcParam, JsonRpcParam, JsonRpcResult, ResultRpc, ResultTypes, RpcResultTypes};
+use crate::geth::{ResultTypes, RpcResultTypes};
 use ethereum_tx_sign::Transaction;
 use ethereum_types::U256;
 
 mod config;
 mod geth;
 mod log;
+mod sql;
+
+const UNISWAP_V3_FACTORY: &str = "0x1f98431c8ad98523631ae4a59f267346ea31f984";
+const UNISWAP_V2_FACTORY: &str = "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
 
 fn main() {
     log::init();
-    let config_file = config::load("config.yaml");
-    config::CONFIG.set(config_file).unwrap();
+    config::CONFIG.set(config::load("config.yaml")).unwrap();
+    log::info!("poolpoll");
+
+    sql::init();
     let config = config::CONFIG.get().unwrap();
 
-    log::info!("poolpoll");
     let abi_file = std::fs::File::open("abi/uniswap_v2_factory.json").unwrap();
     let abi = ethabi::Contract::load(abi_file).unwrap();
     let data = abi
@@ -24,12 +29,9 @@ fn main() {
     let geth = geth::Client::build(&url);
     let mut tx = geth::JsonRpcParam::new();
 
-    const uniswap_v3_factory: &str = "0x1f98431c8ad98523631ae4a59f267346ea31f984";
-    const uniswap_v2_factory: &str = "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
-
     tx.insert(
         "to".to_string(),
-        uniswap_v2_factory.to_string(),
+        UNISWAP_V2_FACTORY.to_string(),
     );
     tx.insert("data".to_string(), format!("0x{}", hex::encode(data)));
     let params = (tx.clone(), Some("latest".to_string()));

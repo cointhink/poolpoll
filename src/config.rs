@@ -8,6 +8,7 @@ pub struct Config {
     pub private_key: String,
     pub geth_url: String,
     pub infura_key: String,
+    pub psql: String,
 }
 
 pub fn load(filename: &str) -> Config {
