@@ -2,6 +2,7 @@ use ethereum_tx_sign::Transaction;
 
 mod config;
 mod log;
+mod geth;
 
 fn main() {
     log::init();
@@ -15,6 +16,7 @@ fn main() {
         .unwrap()
         .encode_input(&vec![])
         .unwrap();
+
     let tx = ethereum_tx_sign::LegacyTransaction {
         chain: 1,
         nonce: 0,
