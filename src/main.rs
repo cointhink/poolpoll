@@ -1,50 +1,28 @@
 use crate::geth::{ResultTypes, RpcResultTypes};
 use ethereum_tx_sign::Transaction;
-use ethereum_types::U256;
+use ethereum_types::{FromStrRadixErr, U256};
+use crate::config::Config;
 
 mod config;
 mod geth;
 mod log;
 mod sql;
-
-const UNISWAP_V3_FACTORY: &str = "0x1f98431c8ad98523631ae4a59f267346ea31f984";
-const UNISWAP_V2_FACTORY: &str = "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
+mod uniswap;
 
 fn main() {
     log::init();
     config::CONFIG.set(config::load("config.yaml")).unwrap();
     log::info!("poolpoll");
 
-    let sql = sql::new();
     let config = config::CONFIG.get().unwrap();
+    let sql = sql::new();
 
-    let abi_file = std::fs::File::open("abi/uniswap_v2_factory.json").unwrap();
-    let abi = ethabi::Contract::load(abi_file).unwrap();
-    let data = abi
-        .function("allPairsLength")
-        .unwrap()
-        .encode_input(&vec![])
-        .unwrap();
     let url = format!("{}/{}", config.geth_url, config.infura_key);
     let geth = geth::Client::build(&url);
-    let mut tx = geth::JsonRpcParam::new();
-
-    tx.insert("to".to_string(), UNISWAP_V2_FACTORY.to_string());
-    tx.insert("data".to_string(), format!("0x{}", hex::encode(data)));
-    let params = (tx.clone(), Some("latest".to_string()));
-    let result = geth
-        .call("eth_call", geth::ParamTypes::Infura(params))
-        .unwrap();
-    match result.part {
-        RpcResultTypes::Error(_) => {}
-        RpcResultTypes::Result(ref r) => match &r.result {
-            ResultTypes::String(rs) => {
-                log::info!("{:?}", U256::from_str_radix(rs, 16))
-            }
-            ResultTypes::TransactionReceipt(_) => {}
-            ResultTypes::Null => {}
-        },
-    }
+    let uniswap = uniswap::V2::new();
+    let pool_count = uniswap.pool_count(&geth);
+    log::info!("Uniswap v2 contract count {:?}", pool_count);
+    log::info!("Uniswap v2 pool info #0 {:?}", uniswap.pool(&geth, 0));
 }
 
 fn sign() {
