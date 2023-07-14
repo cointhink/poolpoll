@@ -15,7 +15,7 @@ fn main() {
     config::CONFIG.set(config::load("config.yaml")).unwrap();
     log::info!("poolpoll");
 
-    sql::init();
+    let sql = sql::new();
     let config = config::CONFIG.get().unwrap();
 
     let abi_file = std::fs::File::open("abi/uniswap_v2_factory.json").unwrap();
