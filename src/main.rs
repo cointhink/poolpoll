@@ -1,7 +1,7 @@
+use crate::config::Config;
 use crate::geth::{ResultTypes, RpcResultTypes};
 use ethereum_tx_sign::Transaction;
 use ethereum_types::{FromStrRadixErr, U256};
-use crate::config::Config;
 
 mod config;
 mod geth;
@@ -19,7 +19,9 @@ fn main() {
 
     let url = format!("{}/{}", config.geth_url, config.infura_key);
     let geth = geth::Client::build(&url);
-    let uniswap = uniswap::V2::new();
+    let abi_file = std::fs::File::open("abi/uniswap_v2_factory.json").unwrap();
+    let abi = ethabi::Contract::load(abi_file).unwrap();
+    let uniswap = uniswap::V2::new(abi);
     let pool_count = uniswap.pool_count(&geth);
     log::info!("Uniswap v2 contract count {:?}", pool_count);
     log::info!("Uniswap v2 pool info #0 {:?}", uniswap.pool(&geth, 0));

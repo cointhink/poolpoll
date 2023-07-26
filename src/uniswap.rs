@@ -1,24 +1,24 @@
-use ethereum_types::U256;
-use crate::{config, geth};
 use crate::geth::{Client, ResultTypes, RpcResultTypes};
+use crate::{config, geth};
+use ethabi::Contract;
+use ethereum_types::U256;
 
 const UNISWAP_V3_FACTORY: &str = "0x1f98431c8ad98523631ae4a59f267346ea31f984";
 const UNISWAP_V2_FACTORY: &str = "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
 
 pub(crate) struct V2 {
-
+    abi: Contract,
 }
 
 impl V2 {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(abi: Contract) -> Self {
         let config = config::CONFIG.get().unwrap();
-        return V2 {}
+        return V2 { abi: abi };
     }
 
     pub(crate) fn pool_count(&self, geth: &Client) -> Result<U256, String> {
-        let abi_file = std::fs::File::open("abi/uniswap_v2_factory.json").unwrap();
-        let abi = ethabi::Contract::load(abi_file).unwrap();
-        let data = abi
+        let data = self
+            .abi
             .function("allPairsLength")
             .unwrap()
             .encode_input(&vec![])
@@ -32,20 +32,20 @@ impl V2 {
             .call("eth_call", geth::ParamTypes::Infura(params))
             .unwrap();
         match result.part {
-            RpcResultTypes::Error(_) => { Err("s".to_owned()) }
+            RpcResultTypes::Error(_) => Err("s".to_owned()),
             RpcResultTypes::Result(ref r) => match &r.result {
                 ResultTypes::String(rs) => {
                     return match U256::from_str_radix(rs, 16) {
-                        Ok(u) => { Ok(u) }
-                        Err(_) => { return Err("boo".to_owned()) }
+                        Ok(u) => Ok(u),
+                        Err(_) => return Err("boo".to_owned()),
                     }
                 }
-                ResultTypes::TransactionReceipt(_) => { return Err("a".to_owned()) }
-                ResultTypes::Null => { return Err("Null".to_owned()) }
+                ResultTypes::TransactionReceipt(_) => return Err("a".to_owned()),
+                ResultTypes::Null => return Err("Null".to_owned()),
             },
         }
     }
     pub(crate) fn pool(&self, geth: &Client, pool_id: u64) -> Result<U256, String> {
-        return Ok(2.try_into().unwrap())
+        return Ok(2.try_into().unwrap());
     }
 }
