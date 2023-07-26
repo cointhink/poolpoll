@@ -69,8 +69,8 @@ impl V2 {
             RpcResultTypes::Error(_) => Err("s".to_owned()),
             RpcResultTypes::Result(ref r) => match &r.result {
                 ResultTypes::String(rs) => {
-                    log::info!("{}", rs);
-                    return Ok(Address::from_str(&rs).unwrap())
+                    let short_rs = &rs[rs.len()-40..];
+                    return Ok(Address::from_str(short_rs).unwrap())
                 }
                 ResultTypes::TransactionReceipt(_) => return Err("a".to_owned()),
                 ResultTypes::Null => return Err("Null".to_owned()),
