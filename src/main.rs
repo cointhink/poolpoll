@@ -1,7 +1,4 @@
-use crate::config::Config;
-use crate::geth::{ResultTypes, RpcResultTypes};
 use ethereum_tx_sign::Transaction;
-use ethereum_types::{FromStrRadixErr, U256};
 
 mod config;
 mod geth;
@@ -24,7 +21,7 @@ fn main() {
     let uniswap = uniswap::V2::new(abi);
     let pool_count = uniswap.pool_count(&geth);
     log::info!("Uniswap v2 contract count {:?}", pool_count);
-    log::info!("Uniswap v2 pool info #0 {:?}", uniswap.pool(&geth, 0));
+    log::info!("Uniswap v2 pool info #0 {:?}", uniswap.pool_addr(&geth, 0));
 }
 
 fn sign() {

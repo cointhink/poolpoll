@@ -1,7 +1,9 @@
 use crate::geth::{Client, ResultTypes, RpcResultTypes};
 use crate::{config, geth};
+use std::str::FromStr;
+use ethabi::token::Token;
 use ethabi::Contract;
-use ethereum_types::U256;
+use ethereum_types::{U256, Address};
 
 const UNISWAP_V3_FACTORY: &str = "0x1f98431c8ad98523631ae4a59f267346ea31f984";
 const UNISWAP_V2_FACTORY: &str = "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
@@ -16,6 +18,14 @@ impl V2 {
         return V2 { abi: abi };
     }
 
+    fn tx_build(data: Vec<u8>) -> geth::JsonRpcParam {
+        let mut tx = geth::JsonRpcParam::new();
+
+        tx.insert("to".to_string(), UNISWAP_V2_FACTORY.to_string());
+        tx.insert("data".to_string(), format!("0x{}", hex::encode(data)));
+        return tx;
+    }
+
     pub(crate) fn pool_count(&self, geth: &Client) -> Result<U256, String> {
         let data = self
             .abi
@@ -23,10 +33,7 @@ impl V2 {
             .unwrap()
             .encode_input(&vec![])
             .unwrap();
-        let mut tx = geth::JsonRpcParam::new();
-
-        tx.insert("to".to_string(), UNISWAP_V2_FACTORY.to_string());
-        tx.insert("data".to_string(), format!("0x{}", hex::encode(data)));
+        let tx = Self::tx_build(data);
         let params = (tx.clone(), Some("latest".to_string()));
         let result = geth
             .call("eth_call", geth::ParamTypes::Infura(params))
@@ -45,7 +52,29 @@ impl V2 {
             },
         }
     }
-    pub(crate) fn pool(&self, geth: &Client, pool_id: u64) -> Result<U256, String> {
-        return Ok(2.try_into().unwrap());
+
+    pub(crate) fn pool_addr(&self, geth: &Client, pool_id: u64) -> Result<Address, String> {
+        let data = self
+            .abi
+            .function("allPairs")
+            .unwrap()
+            .encode_input(&vec![Token::Uint(pool_id.into())])
+            .unwrap();
+        let tx = Self::tx_build(data);
+        let params = (tx.clone(), Some("latest".to_string()));
+        let result = geth
+            .call("eth_call", geth::ParamTypes::Infura(params))
+            .unwrap();
+        match result.part {
+            RpcResultTypes::Error(_) => Err("s".to_owned()),
+            RpcResultTypes::Result(ref r) => match &r.result {
+                ResultTypes::String(rs) => {
+                    log::info!("{}", rs);
+                    return Ok(Address::from_str(&rs).unwrap())
+                }
+                ResultTypes::TransactionReceipt(_) => return Err("a".to_owned()),
+                ResultTypes::Null => return Err("Null".to_owned()),
+            },
+        }
     }
 }
