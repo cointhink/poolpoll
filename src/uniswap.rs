@@ -14,6 +14,12 @@ pub mod v2 {
         pub address: Address,
     }
 
+    impl crate::sql::Ops for Pool {
+        fn to_sql(&self) -> crate::sql::SqlQuery {
+            ("boo".to_string(), &[])
+        }
+    }
+
     pub(crate) struct Factory {
         abi: Contract,
     }

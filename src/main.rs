@@ -1,4 +1,5 @@
 use ethereum_tx_sign::Transaction;
+use crate::sql::Ops;
 
 mod config;
 mod geth;
@@ -12,7 +13,7 @@ fn main() {
     log::info!("poolpoll");
 
     let config = config::CONFIG.get().unwrap();
-    let sql = sql::new();
+    let mut sql = sql::new();
 
     let url = format!("{}/{}", config.geth_url, config.infura_key);
     let geth = geth::Client::build(&url);
@@ -22,13 +23,12 @@ fn main() {
     let pool_count = uniswap.pool_count(&geth);
     log::info!("Uniswap v2 contract count {:?}", pool_count);
     for pool_idx in 0..1 {
-    let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
-    let abi = ethabi::Contract::load(abi_file).unwrap();
+        let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
+        let abi = ethabi::Contract::load(abi_file).unwrap();
         let address = uniswap.pool_addr(&geth, pool_idx).unwrap();
-        let pool = uniswap::v2::Pool{address};
-        log::info!(
-            "Uniswap v2 pool info #0 {:?}", pool
-        );
+        let pool = uniswap::v2::Pool { address };
+        log::info!("Uniswap v2 pool info #0 {:?}", pool);
+        sql.insert(pool.to_sql());
     }
 }
 

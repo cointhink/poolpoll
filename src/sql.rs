@@ -1,5 +1,13 @@
 use crate::config;
 //use rust_decimal::Decimal;
+use postgres::types::ToSql;
+
+
+pub type SqlQuery<'a> = (String, &'a [&'a (dyn ToSql + Sync)]);
+
+pub trait Ops {
+    fn to_sql(&self) -> SqlQuery;
+}
 
 pub struct Client {
     pub client: postgres::Client,
@@ -16,12 +24,15 @@ pub(crate) fn new() -> Client {
 }
 
 impl Client {
-    fn q(&mut self) {
+    pub fn q(&mut self) {
         let q = sql_query_builder::Select::new().select("*").from("pools");
         log::info!("{}", q.to_string());
         let rows = self.client.query(&q.to_string(), &[]).unwrap();
         log::info!("rows: {:?}", rows);
         log::info!("0.0: {:?}", rows[0].get::<&str, String>("address"));
+    }
+    pub fn insert(&mut self, query: SqlQuery) {
+        self.client.execute(&query.0, &query.1[..]).unwrap();
     }
 }
 
