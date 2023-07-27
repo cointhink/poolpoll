@@ -18,10 +18,18 @@ fn main() {
     let geth = geth::Client::build(&url);
     let abi_file = std::fs::File::open("abi/uniswap_v2_factory.json").unwrap();
     let abi = ethabi::Contract::load(abi_file).unwrap();
-    let uniswap = uniswap::V2::new(abi);
+    let uniswap = uniswap::v2::Factory::new(abi);
     let pool_count = uniswap.pool_count(&geth);
     log::info!("Uniswap v2 contract count {:?}", pool_count);
-    log::info!("Uniswap v2 pool info #0 {:?}", uniswap.pool_addr(&geth, 0));
+    for pool_idx in 0..1 {
+    let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
+    let abi = ethabi::Contract::load(abi_file).unwrap();
+        let address = uniswap.pool_addr(&geth, pool_idx).unwrap();
+        let pool = uniswap::v2::Pool{address};
+        log::info!(
+            "Uniswap v2 pool info #0 {:?}", pool
+        );
+    }
 }
 
 fn sign() {
