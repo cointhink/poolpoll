@@ -4,6 +4,7 @@ pub mod v2 {
     use ethabi::token::Token;
     use ethabi::Contract;
     use ethereum_types::{Address, U256};
+    use sql_query_builder as sql;
     use std::str::FromStr;
 
     const UNISWAP_V3_FACTORY: &str = "0x1f98431c8ad98523631ae4a59f267346ea31f984";
@@ -16,7 +17,8 @@ pub mod v2 {
 
     impl crate::sql::Ops for Pool {
         fn to_sql(&self) -> crate::sql::SqlQuery {
-            ("boo".to_string(), &[])
+            let mut select = sql::Insert::new().insert_into("pools").values("($1)");
+            (select.as_string(), vec!["string".to_owned()])
         }
     }
 
@@ -26,7 +28,7 @@ pub mod v2 {
 
     impl Factory {
         pub(crate) fn new(abi: Contract) -> Self {
-            let config = config::CONFIG.get().unwrap();
+            let _config = config::CONFIG.get().unwrap();
             return Factory { abi: abi };
         }
 
