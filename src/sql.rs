@@ -2,7 +2,7 @@ use crate::config;
 //use rust_decimal::Decimal;
 use postgres::types::ToSql;
 
-pub type SqlQuery = (String, Vec<String>);
+pub type SqlQuery = (String, Vec<Box<dyn ToSql + Sync>>);
 
 pub trait Ops {
     fn to_sql(&self) -> SqlQuery;
@@ -33,8 +33,11 @@ impl Client {
 
     pub fn insert(&mut self, query: SqlQuery) {
         log::info!("sql: {} {:?}", query.0, query.1);
+        // expected `&[&dyn ToSql + Sync]`, found `&Vec<Box<dyn ToSql + Sync>>`
+        // self.client.execute(&query.0, &query.1).unwrap();
+
         // convert element type from String to ToSql+Sync
-        let params: Vec<&(dyn ToSql + Sync)> = query.1.iter().map(|y| y as &(dyn ToSql + Sync)).collect();
+        let params: Vec<&(dyn ToSql + Sync)> = query.1.iter().map(|y| &**y).collect();
 
         //  params: &[&(dyn ToSql + Sync)]
         self.client.execute(&query.0, &params).unwrap();

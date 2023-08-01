@@ -12,13 +12,14 @@ pub mod v2 {
 
     #[derive(Debug)]
     pub(crate) struct Pool {
+        pub index: i32,
         pub address: Address,
     }
 
     impl crate::sql::Ops for Pool {
         fn to_sql(&self) -> crate::sql::SqlQuery {
-            let mut select = sql::Insert::new().insert_into("pools").values("($1)");
-            (select.as_string(), vec!["string".to_owned()])
+            let mut select = sql::Insert::new().insert_into("pools").values("($1, $2)");
+            (select.as_string(), vec![Box::new(self.index), Box::new(self.address.to_string())])
         }
     }
 
