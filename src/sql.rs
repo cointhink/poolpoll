@@ -30,8 +30,17 @@ impl Client {
         log::info!("rows: {:?}", rows);
         log::info!("0.0: {:?}", rows[0].get::<&str, String>("address"));
     }
+
     pub fn insert(&mut self, query: SqlQuery) {
-        //self.client .execute(&query.0, &query.1).unwrap();
+        log::info!("sql: {} {:?}", query.0, query.1);
+        // convert type to ToSql+Sync
+        let params: Vec<&(dyn ToSql + Sync)> = query.1.iter().map(|y| y as &(dyn ToSql + Sync)).collect();
+
+        //  params: &[&(dyn ToSql + Sync)]
+        self.client.execute(&query.0, &params).unwrap();
+
+        // this says an in-place array conversion works, but it doesnt work in any other case
+        //self.client.execute(&query.0, &[&yes]).unwrap();
     }
 }
 
