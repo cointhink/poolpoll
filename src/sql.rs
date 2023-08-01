@@ -33,7 +33,7 @@ impl Client {
 
     pub fn insert(&mut self, query: SqlQuery) {
         log::info!("sql: {} {:?}", query.0, query.1);
-        // convert type to ToSql+Sync
+        // convert element type from String to ToSql+Sync
         let params: Vec<&(dyn ToSql + Sync)> = query.1.iter().map(|y| y as &(dyn ToSql + Sync)).collect();
 
         //  params: &[&(dyn ToSql + Sync)]
