@@ -19,7 +19,10 @@ pub mod v2 {
     impl crate::sql::Ops for Pool {
         fn to_sql(&self) -> crate::sql::SqlQuery {
             let mut select = sql::Insert::new().insert_into("pools").values("($1, $2)");
-            (select.as_string(), vec![Box::new(self.index), Box::new(self.address.to_string())])
+            (
+                select.as_string(),
+                vec![Box::new(self.index), Box::new(format!("{:x}" ,self.address))],
+            )
         }
     }
 
