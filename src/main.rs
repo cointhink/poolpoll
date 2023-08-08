@@ -22,9 +22,9 @@ fn main() {
     let uniswap = uniswap::v2::Factory::new(abi);
     let pool_count = uniswap.pool_count(&geth);
     log::info!("Uniswap v2 contract count {:?}", pool_count);
+    let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
+    let abi = ethabi::Contract::load(abi_file).unwrap();
     for pool_idx in 0..10 {
-        let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
-        let abi = ethabi::Contract::load(abi_file).unwrap();
         let address = uniswap.pool_addr(&geth, pool_idx).unwrap();
         let pool = uniswap::v2::Pool {
             index: pool_idx as i32,

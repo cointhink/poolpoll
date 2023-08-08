@@ -18,10 +18,16 @@ pub mod v2 {
 
     impl crate::sql::Ops for Pool {
         fn to_sql(&self) -> crate::sql::SqlQuery {
-            let mut select = sql::Insert::new().insert_into("pools").values("($1, $2)").on_conflict("(index) DO UPDATE SET address = EXCLUDED.address;");
+            let mut select = sql::Insert::new()
+                .insert_into("pools")
+                .values("($1, $2)")
+                .on_conflict("(index) DO UPDATE SET address = EXCLUDED.address;");
             (
                 select.as_string(),
-                vec![Box::new(self.index), Box::new(format!("{:x}" ,self.address))],
+                vec![
+                    Box::new(self.index),
+                    Box::new(format!("{:x}", self.address)),
+                ],
             )
         }
     }
