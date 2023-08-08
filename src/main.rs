@@ -1,5 +1,4 @@
 use crate::sql::Ops;
-use ethereum_tx_sign::Transaction;
 
 mod config;
 mod geth;
@@ -23,7 +22,7 @@ fn main() {
     let pool_count = uniswap.pool_count(&geth);
     log::info!("Uniswap v2 contract count {:?}", pool_count);
     let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
-    let abi = ethabi::Contract::load(abi_file).unwrap();
+    let _abi = ethabi::Contract::load(abi_file).unwrap();
     for pool_idx in 0..10 {
         let address = uniswap.pool_addr(&geth, pool_idx).unwrap();
         let pool = uniswap::v2::Pool {
@@ -35,19 +34,20 @@ fn main() {
     }
 }
 
-fn sign() {
-    let tx = ethereum_tx_sign::LegacyTransaction {
-        chain: 1,
-        nonce: 0,
-        to: None,
-        value: 0,
-        gas_price: 0,
-        gas: 0,
-        data: vec![],
-    };
+// use ethereum_tx_sign::Transaction;
+// fn sign() {
+//     let tx = ethereum_tx_sign::LegacyTransaction {
+//         chain: 1,
+//         nonce: 0,
+//         to: None,
+//         value: 0,
+//         gas_price: 0,
+//         gas: 0,
+//         data: vec![],
+//     };
 
-    let private_key = hex::decode(&config::CONFIG.get().unwrap().private_key).unwrap();
-    let ecdsa = tx.ecdsa(&private_key).unwrap();
-    let _ = tx.sign(&ecdsa);
-    log::info!("signed.")
-}
+//     let private_key = hex::decode(&config::CONFIG.get().unwrap().private_key).unwrap();
+//     let ecdsa = tx.ecdsa(&private_key).unwrap();
+//     let _ = tx.sign(&ecdsa);
+//     log::info!("signed.")
+// }

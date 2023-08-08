@@ -7,7 +7,7 @@ pub mod v2 {
     use sql_query_builder as sql;
     use std::str::FromStr;
 
-    const UNISWAP_V3_FACTORY: &str = "0x1f98431c8ad98523631ae4a59f267346ea31f984";
+    //const UNISWAP_V3_FACTORY: &str = "0x1f98431c8ad98523631ae4a59f267346ea31f984";
     const UNISWAP_V2_FACTORY: &str = "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
 
     #[derive(Debug)]
@@ -18,7 +18,7 @@ pub mod v2 {
 
     impl crate::sql::Ops for Pool {
         fn to_sql(&self) -> crate::sql::SqlQuery {
-            let mut select = sql::Insert::new()
+            let select = sql::Insert::new()
                 .insert_into("pools")
                 .values("($1, $2)")
                 .on_conflict("(index) DO UPDATE SET address = EXCLUDED.address;");
@@ -57,12 +57,7 @@ pub mod v2 {
                 .unwrap()
                 .encode_input(&vec![])
                 .unwrap();
-            let tx = Self::tx_build(data);
-            let params = (tx.clone(), Some("latest".to_string()));
-            let result = geth
-                .call("eth_call", geth::ParamTypes::Infura(params))
-                .unwrap();
-            match result.part {
+            match eth_call(geth, UNISWAP_V2_FACTORY.to_string(), data).part {
                 RpcResultTypes::Error(_) => Err("s".to_owned()),
                 RpcResultTypes::Result(ref r) => match &r.result {
                     ResultTypes::String(rs) => {
@@ -84,12 +79,7 @@ pub mod v2 {
                 .unwrap()
                 .encode_input(&vec![Token::Uint(pool_id.into())])
                 .unwrap();
-            let tx = Self::tx_build(data);
-            let params = (tx.clone(), Some("latest".to_string()));
-            let result = geth
-                .call("eth_call", geth::ParamTypes::Infura(params))
-                .unwrap();
-            match result.part {
+            match eth_call(geth, UNISWAP_V2_FACTORY.to_string(), data).part {
                 RpcResultTypes::Error(_) => Err("s".to_owned()),
                 RpcResultTypes::Result(ref r) => match &r.result {
                     ResultTypes::String(rs) => {
@@ -101,5 +91,19 @@ pub mod v2 {
                 },
             }
         }
+    }
+
+    fn eth_call(geth: &Client, to: String, data: Vec<u8>) -> crate::geth::JsonRpcResult {
+        let tx = tx_build(to, data);
+        let params = (tx.clone(), Some("latest".to_string()));
+        geth.call("eth_call", geth::ParamTypes::Infura(params))
+            .unwrap()
+    }
+    fn tx_build(to: String, data: Vec<u8>) -> geth::JsonRpcParam {
+        let mut tx = geth::JsonRpcParam::new();
+
+        tx.insert("to".to_string(), to);
+        tx.insert("data".to_string(), format!("0x{}", hex::encode(data)));
+        return tx;
     }
 }
