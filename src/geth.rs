@@ -27,7 +27,7 @@ impl Client {
         method: &str,
         params: ParamTypes,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        let result = self.call(method, params);
+        let result = self.rpc(method, params);
         match result {
             Ok(rpc_result) => match rpc_result.part {
                 RpcResultTypes::Error(e) => Err(Box::try_from(e.error.message).unwrap()),
@@ -57,7 +57,7 @@ impl Client {
         Ok(u32::from_str_radix(&tx_count_str[2..], 16).unwrap())
     }
 
-    pub fn call(
+    pub fn rpc(
         &self,
         method: &str,
         params: ParamTypes,

@@ -42,14 +42,6 @@ pub mod v2 {
             return Factory { abi: abi };
         }
 
-        fn tx_build(data: Vec<u8>) -> geth::JsonRpcParam {
-            let mut tx = geth::JsonRpcParam::new();
-
-            tx.insert("to".to_string(), UNISWAP_V2_FACTORY.to_string());
-            tx.insert("data".to_string(), format!("0x{}", hex::encode(data)));
-            return tx;
-        }
-
         pub(crate) fn pool_count(&self, geth: &Client) -> Result<U256, String> {
             let data = self
                 .abi
@@ -95,10 +87,11 @@ pub mod v2 {
 
     fn eth_call(geth: &Client, to: String, data: Vec<u8>) -> crate::geth::JsonRpcResult {
         let tx = tx_build(to, data);
-        let params = (tx.clone(), Some("latest".to_string()));
-        geth.call("eth_call", geth::ParamTypes::Infura(params))
+        let params = (tx, Some("latest".to_string()));
+        geth.rpc("eth_call", geth::ParamTypes::Infura(params))
             .unwrap()
     }
+
     fn tx_build(to: String, data: Vec<u8>) -> geth::JsonRpcParam {
         let mut tx = geth::JsonRpcParam::new();
 
