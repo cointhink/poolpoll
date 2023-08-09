@@ -23,6 +23,7 @@ pub(crate) fn new() -> Client {
 }
 
 impl Client {
+    /*
     pub fn q(&mut self) {
         let q = sql_query_builder::Select::new().select("*").from("pools");
         log::info!("{}", q.to_string());
@@ -30,6 +31,7 @@ impl Client {
         log::info!("rows: {:?}", rows);
         log::info!("0.0: {:?}", rows[0].get::<&str, String>("address"));
     }
+    */
 
     pub fn insert(&mut self, query: SqlQuery) {
         log::info!("sql: {} {:?}", query.0, query.1);

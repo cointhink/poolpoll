@@ -21,6 +21,27 @@ pub mod v2 {
         pub y: u128,
     }
 
+    impl Pool {
+        pub fn reserves(
+            geth: &Client,
+            abi: &Contract,
+            address: &Address,
+        ) -> Result<String, Box<dyn std::error::Error>> {
+            log::info!(
+                "reserves address {:?}",
+                address.as_bytes().to_ascii_lowercase()
+            );
+            let data = abi
+                .function("token0")
+                .unwrap()
+                .encode_input(&vec![])
+                .unwrap();
+            let result_str = geth.eth_call(address.to_string(), data)?;
+            log::info!("reserves {}", result_str);
+            Ok(result_str)
+        }
+    }
+
     impl crate::sql::Ops for Pool {
         fn to_sql(&self) -> crate::sql::SqlQuery {
             let select = sql::Insert::new()

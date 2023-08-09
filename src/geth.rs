@@ -170,6 +170,7 @@ pub fn gen_id() -> String {
     bs58::encode(pad).into_string()
 }
 
+/*
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EthGasStationResult {
@@ -189,3 +190,4 @@ pub fn ethgasstation_fast() -> u64 {
     let gas_prices = ethgasstation();
     (gas_prices.fast as f64 * 100_000_000u64 as f64) as u64
 }
+*/
