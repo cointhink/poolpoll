@@ -22,6 +22,16 @@ impl Client {
         }
     }
 
+    pub fn eth_call(
+        &self,
+        to: String,
+        data: Vec<u8>,
+    ) -> Result<String, Box<dyn std::error::Error>> {
+        let tx = tx_build(to, data);
+        let params = (tx, Some("latest".to_string()));
+        self.rpc_str("eth_call", ParamTypes::Infura(params))
+    }
+
     pub fn rpc_str(
         &self,
         method: &str,
@@ -76,16 +86,6 @@ impl Client {
                 Ok(rpc_result)
             }
             Err(e) => Err(Box::new(e)),
-        }
-    }
-
-    pub fn eth_call(&self, to: String, data: Vec<u8>) -> Result<ResultTypes, String> {
-        let tx = tx_build(to, data);
-        let params = (tx, Some("latest".to_string()));
-        let result = self.rpc("eth_call", ParamTypes::Infura(params)).unwrap();
-        match result.part {
-            RpcResultTypes::Error(e) => Err(format!("eth_call {}", e.error)),
-            RpcResultTypes::Result(r) => Ok(r.result),
         }
     }
 }
