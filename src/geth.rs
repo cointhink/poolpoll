@@ -79,10 +79,14 @@ impl Client {
         }
     }
 
-    pub fn eth_call(&self, to: String, data: Vec<u8>) -> JsonRpcResult {
+    pub fn eth_call(&self, to: String, data: Vec<u8>) -> Result<ResultTypes, String> {
         let tx = tx_build(to, data);
         let params = (tx, Some("latest".to_string()));
-        self.rpc("eth_call", ParamTypes::Infura(params)).unwrap()
+        let result = self.rpc("eth_call", ParamTypes::Infura(params)).unwrap();
+        match result.part {
+            RpcResultTypes::Error(e) => Err(format!("eth_call {}", e.error)),
+            RpcResultTypes::Result(r) => Ok(r.result),
+        }
     }
 }
 
@@ -153,6 +157,12 @@ pub struct ErrorRpc {
 pub struct ErrorDetailRpc {
     pub code: i32,
     pub message: String,
+}
+
+impl std::fmt::Display for ErrorDetailRpc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("#{} {}", self.code, self.message))
+    }
 }
 
 pub fn gen_id() -> String {

@@ -1,6 +1,6 @@
 pub mod v2 {
-    use crate::geth::{Client, ResultTypes, RpcResultTypes};
-    use crate::{config, geth};
+    use crate::config;
+    use crate::geth::{Client, ResultTypes};
     use ethabi::token::Token;
     use ethabi::Contract;
     use ethereum_types::{Address, U256};
@@ -49,18 +49,15 @@ pub mod v2 {
                 .unwrap()
                 .encode_input(&vec![])
                 .unwrap();
-            match geth.eth_call(UNISWAP_V2_FACTORY.to_string(), data).part {
-                RpcResultTypes::Error(_) => Err("s".to_owned()),
-                RpcResultTypes::Result(ref r) => match &r.result {
-                    ResultTypes::String(rs) => {
-                        return match U256::from_str_radix(rs, 16) {
-                            Ok(u) => Ok(u),
-                            Err(_) => return Err("boo".to_owned()),
-                        }
+            match geth.eth_call(UNISWAP_V2_FACTORY.to_string(), data).unwrap() {
+                ResultTypes::String(rs) => {
+                    return match U256::from_str_radix(&rs, 16) {
+                        Ok(u) => Ok(u),
+                        Err(_) => return Err("boo".to_owned()),
                     }
-                    ResultTypes::TransactionReceipt(_) => return Err("a".to_owned()),
-                    ResultTypes::Null => return Err("Null".to_owned()),
-                },
+                }
+                ResultTypes::TransactionReceipt(_) => return Err("a".to_owned()),
+                ResultTypes::Null => return Err("Null".to_owned()),
             }
         }
 
@@ -71,16 +68,13 @@ pub mod v2 {
                 .unwrap()
                 .encode_input(&vec![Token::Uint(pool_id.into())])
                 .unwrap();
-            match geth.eth_call(UNISWAP_V2_FACTORY.to_string(), data).part {
-                RpcResultTypes::Error(_) => Err("s".to_owned()),
-                RpcResultTypes::Result(ref r) => match &r.result {
-                    ResultTypes::String(rs) => {
-                        let short_rs = &rs[rs.len() - 40..];
-                        return Ok(Address::from_str(short_rs).unwrap());
-                    }
-                    ResultTypes::TransactionReceipt(_) => return Err("a".to_owned()),
-                    ResultTypes::Null => return Err("Null".to_owned()),
-                },
+            match geth.eth_call(UNISWAP_V2_FACTORY.to_string(), data).unwrap() {
+                ResultTypes::String(rs) => {
+                    let short_rs = &rs[rs.len() - 40..];
+                    return Ok(Address::from_str(short_rs).unwrap());
+                }
+                ResultTypes::TransactionReceipt(_) => return Err("a".to_owned()),
+                ResultTypes::Null => return Err("Null".to_owned()),
             }
         }
     }
