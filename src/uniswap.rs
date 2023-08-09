@@ -1,3 +1,7 @@
+pub mod v3 {
+    const _UNISWAP_FACTORY: &str = "0x1f98431c8ad98523631ae4a59f267346ea31f984";
+}
+
 pub mod v2 {
     use crate::config;
     use crate::geth::Client;
@@ -7,26 +11,29 @@ pub mod v2 {
     use sql_query_builder as sql;
     use std::str::FromStr;
 
-    //const UNISWAP_V3_FACTORY: &str = "0x1f98431c8ad98523631ae4a59f267346ea31f984";
-    const UNISWAP_V2_FACTORY: &str = "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
+    const UNISWAP_FACTORY: &str = "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
 
     #[derive(Debug)]
     pub(crate) struct Pool {
         pub index: i32,
         pub address: Address,
+        pub x: u128,
+        pub y: u128,
     }
 
     impl crate::sql::Ops for Pool {
         fn to_sql(&self) -> crate::sql::SqlQuery {
             let select = sql::Insert::new()
                 .insert_into("pools")
-                .values("($1, $2)")
-                .on_conflict("(index) DO UPDATE SET address = EXCLUDED.address;");
+                .values("($1, $2, $3, $4)")
+                .on_conflict("(index) DO UPDATE SET address = EXCLUDED.address, x = EXCLUDED.x, y = EXCLUDED.y;");
             (
                 select.as_string(),
                 vec![
                     Box::new(self.index),
                     Box::new(format!("{:x}", self.address)),
+                    Box::new(self.x.to_string()),
+                    Box::new(self.y.to_string()),
                 ],
             )
         }
@@ -49,7 +56,7 @@ pub mod v2 {
                 .unwrap()
                 .encode_input(&vec![])
                 .unwrap();
-            let result_str = geth.eth_call(UNISWAP_V2_FACTORY.to_string(), data)?;
+            let result_str = geth.eth_call(UNISWAP_FACTORY.to_string(), data)?;
             return Ok(U256::from_str_radix(&result_str, 16)?);
         }
 
@@ -64,7 +71,7 @@ pub mod v2 {
                 .unwrap()
                 .encode_input(&vec![Token::Uint(pool_id.into())])
                 .unwrap();
-            let result_str = geth.eth_call(UNISWAP_V2_FACTORY.to_string(), data)?;
+            let result_str = geth.eth_call(UNISWAP_FACTORY.to_string(), data)?;
             let short_rs = &result_str[result_str.len() - 40..];
             return Ok(Address::from_str(short_rs).unwrap());
         }
