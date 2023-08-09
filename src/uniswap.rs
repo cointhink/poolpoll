@@ -42,38 +42,31 @@ pub mod v2 {
             return Factory { abi: abi };
         }
 
-        pub(crate) fn pool_count(&self, geth: &Client) -> Result<U256, String> {
+        pub(crate) fn pool_count(&self, geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
             let data = self
                 .abi
                 .function("allPairsLength")
                 .unwrap()
                 .encode_input(&vec![])
                 .unwrap();
-            match geth.eth_call(UNISWAP_V2_FACTORY.to_string(), data) {
-                Ok(rs) => {
-                    return match U256::from_str_radix(&rs, 16) {
-                        Ok(u) => Ok(u),
-                        Err(_) => return Err("boo".to_owned()),
-                    }
-                }
-                Err(e) => Err(e.to_string()),
-            }
+            let result_str = geth.eth_call(UNISWAP_V2_FACTORY.to_string(), data)?;
+            return Ok(U256::from_str_radix(&result_str, 16)?);
         }
 
-        pub(crate) fn pool_addr(&self, geth: &Client, pool_id: u64) -> Result<Address, String> {
+        pub(crate) fn pool_addr(
+            &self,
+            geth: &Client,
+            pool_id: u64,
+        ) -> Result<Address, Box<dyn std::error::Error>> {
             let data = self
                 .abi
                 .function("allPairs")
                 .unwrap()
                 .encode_input(&vec![Token::Uint(pool_id.into())])
                 .unwrap();
-            match geth.eth_call(UNISWAP_V2_FACTORY.to_string(), data) {
-                Ok(rs) => {
-                    let short_rs = &rs[rs.len() - 40..];
-                    return Ok(Address::from_str(short_rs).unwrap());
-                }
-                Err(e) => Err(e.to_string()),
-            }
+            let result_str = geth.eth_call(UNISWAP_V2_FACTORY.to_string(), data)?;
+            let short_rs = &result_str[result_str.len() - 40..];
+            return Ok(Address::from_str(short_rs).unwrap());
         }
     }
 }
