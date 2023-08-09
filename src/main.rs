@@ -14,8 +14,7 @@ fn main() {
     let config = config::CONFIG.get().unwrap();
     let mut sql = sql::new();
 
-    let url = format!("{}/{}", config.geth_url, config.infura_key);
-    let geth = geth::Client::build(&url);
+    let geth = geth::Client::build(&config.geth_url, &config.infura_key);
     let abi_file = std::fs::File::open("abi/uniswap_v2_factory.json").unwrap();
     let abi = ethabi::Contract::load(abi_file).unwrap();
     let uniswap = uniswap::v2::Factory::new(abi);

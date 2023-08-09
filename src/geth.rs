@@ -16,10 +16,9 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn build(geth_url: &str) -> Client {
-        Client {
-            url: geth_url.to_string(),
-        }
+    pub fn build(url: &str, key: &str) -> Client {
+        let url = format!("{}/{}", url, key);
+        Client { url }
     }
 
     pub fn eth_call(
