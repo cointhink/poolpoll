@@ -49,7 +49,7 @@ pub mod v2 {
                 .unwrap()
                 .encode_input(&vec![])
                 .unwrap();
-            match eth_call(geth, UNISWAP_V2_FACTORY.to_string(), data).part {
+            match geth.eth_call(UNISWAP_V2_FACTORY.to_string(), data).part {
                 RpcResultTypes::Error(_) => Err("s".to_owned()),
                 RpcResultTypes::Result(ref r) => match &r.result {
                     ResultTypes::String(rs) => {
@@ -71,7 +71,7 @@ pub mod v2 {
                 .unwrap()
                 .encode_input(&vec![Token::Uint(pool_id.into())])
                 .unwrap();
-            match eth_call(geth, UNISWAP_V2_FACTORY.to_string(), data).part {
+            match geth.eth_call(UNISWAP_V2_FACTORY.to_string(), data).part {
                 RpcResultTypes::Error(_) => Err("s".to_owned()),
                 RpcResultTypes::Result(ref r) => match &r.result {
                     ResultTypes::String(rs) => {
@@ -83,20 +83,5 @@ pub mod v2 {
                 },
             }
         }
-    }
-
-    fn eth_call(geth: &Client, to: String, data: Vec<u8>) -> crate::geth::JsonRpcResult {
-        let tx = tx_build(to, data);
-        let params = (tx, Some("latest".to_string()));
-        geth.rpc("eth_call", geth::ParamTypes::Infura(params))
-            .unwrap()
-    }
-
-    fn tx_build(to: String, data: Vec<u8>) -> geth::JsonRpcParam {
-        let mut tx = geth::JsonRpcParam::new();
-
-        tx.insert("to".to_string(), to);
-        tx.insert("data".to_string(), format!("0x{}", hex::encode(data)));
-        return tx;
     }
 }

@@ -78,6 +78,20 @@ impl Client {
             Err(e) => Err(Box::new(e)),
         }
     }
+
+    pub fn eth_call(&self, to: String, data: Vec<u8>) -> JsonRpcResult {
+        let tx = tx_build(to, data);
+        let params = (tx, Some("latest".to_string()));
+        self.rpc("eth_call", ParamTypes::Infura(params)).unwrap()
+    }
+}
+
+fn tx_build(to: String, data: Vec<u8>) -> JsonRpcParam {
+    let mut tx = JsonRpcParam::new();
+
+    tx.insert("to".to_string(), to);
+    tx.insert("data".to_string(), format!("0x{}", hex::encode(data)));
+    return tx;
 }
 
 #[derive(Debug, Serialize, Deserialize)]
