@@ -86,7 +86,7 @@ impl Client {
             method: method.to_string(),
             params: params,
         };
-        println!("geth {}", method);
+        println!("geth {} {} {:?}", method, self.url, jrpc.params);
         let result = ureq::post(&self.url).send_json(&jrpc);
         match result {
             Ok(res) => {
