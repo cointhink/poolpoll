@@ -26,19 +26,11 @@ pub mod v2 {
             geth: &Client,
             abi: &Contract,
             address: &Address,
-        ) -> Result<String, Box<dyn std::error::Error>> {
-            log::info!(
-                "reserves address {:?}",
-                address.as_bytes().to_ascii_lowercase()
-            );
-            let data = abi
-                .function("token0")
-                .unwrap()
-                .encode_input(&vec![])
-                .unwrap();
-            let result_str = geth.eth_call(address.to_string(), data)?;
-            log::info!("reserves {}", result_str);
-            Ok(result_str)
+        ) -> Result<(String, String), Box<dyn std::error::Error>> {
+            log::info!("reserves address {:?}", hex::encode(address));
+            let result_t0 = geth.eth_call(hex::encode(address), abi, "token0", &vec![])?;
+            let result_t1 = geth.eth_call(hex::encode(address), abi, "token0", &vec![])?;
+            Ok((result_t0, result_t1))
         }
     }
 
@@ -71,13 +63,12 @@ pub mod v2 {
         }
 
         pub(crate) fn pool_count(&self, geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
-            let data = self
-                .abi
-                .function("allPairsLength")
-                .unwrap()
-                .encode_input(&vec![])
-                .unwrap();
-            let result_str = geth.eth_call(UNISWAP_FACTORY.to_string(), data)?;
+            let result_str = geth.eth_call(
+                UNISWAP_FACTORY.to_string(),
+                &self.abi,
+                "allPairsLength",
+                &vec![],
+            )?;
             return Ok(U256::from_str_radix(&result_str, 16)?);
         }
 
@@ -86,13 +77,12 @@ pub mod v2 {
             geth: &Client,
             pool_id: u64,
         ) -> Result<Address, Box<dyn std::error::Error>> {
-            let data = self
-                .abi
-                .function("allPairs")
-                .unwrap()
-                .encode_input(&vec![Token::Uint(pool_id.into())])
-                .unwrap();
-            let result_str = geth.eth_call(UNISWAP_FACTORY.to_string(), data)?;
+            let result_str = geth.eth_call(
+                UNISWAP_FACTORY.to_string(),
+                &self.abi,
+                "allPairs",
+                &vec![Token::Uint(pool_id.into())],
+            )?;
             let short_rs = &result_str[result_str.len() - 40..];
             return Ok(Address::from_str(short_rs).unwrap());
         }
