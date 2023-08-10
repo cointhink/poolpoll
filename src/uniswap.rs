@@ -17,6 +17,13 @@ pub mod v2 {
     pub(crate) struct Pool {
         pub index: i32,
         pub address: Address,
+        pub token0: Address,
+        pub token1: Address,
+    }
+
+    #[derive(Debug)]
+    pub(crate) struct Reserves {
+        pub block_number: u128,
         pub x: U256,
         pub y: U256,
     }
@@ -26,11 +33,15 @@ pub mod v2 {
             geth: &Client,
             abi: &Contract,
             address: &Address,
-        ) -> Result<(String, String), Box<dyn std::error::Error>> {
+        ) -> Result<(Address, Address), Box<dyn std::error::Error>> {
             let address_hex = format!("0x{}", hex::encode(address));
             let result_t0 = geth.eth_call(address_hex.clone(), abi, "token0", &vec![])?;
             let result_t1 = geth.eth_call(address_hex.clone(), abi, "token1", &vec![])?;
-            Ok((result_t0, result_t1))
+            println!("token0 {}", &result_t0[26..]);
+            Ok((
+                Address::from_str(&result_t0[26..]).unwrap(),
+                Address::from_str(&result_t1[26..]).unwrap(),
+            ))
         }
 
         pub fn reserves(
@@ -39,9 +50,7 @@ pub mod v2 {
             address: &Address,
         ) -> Result<(U256, U256), Box<dyn std::error::Error>> {
             let address_hex = format!("0x{}", hex::encode(address));
-            log::info!("reserves address {:?}", address_hex);
             let result = geth.eth_call(address_hex.clone(), abi, "getReserves", &vec![])?;
-            log::info!("reserves {:?} ", result);
             let t0 = U256::from_str_radix(&result[2..66], 16).unwrap();
             let t1 = U256::from_str_radix(&result[66..130], 16).unwrap();
             Ok((t0, t1))
@@ -52,15 +61,13 @@ pub mod v2 {
         fn to_sql(&self) -> crate::sql::SqlQuery {
             let select = sql::Insert::new()
                 .insert_into("pools")
-                .values("($1, $2, $3, $4)")
-                .on_conflict("(index) DO UPDATE SET address = EXCLUDED.address, x = EXCLUDED.x, y = EXCLUDED.y;");
+                .values("($1, $2)")
+                .on_conflict("(index) DO UPDATE SET contract_address = EXCLUDED.contract_address;");
             (
                 select.as_string(),
                 vec![
                     Box::new(self.index),
                     Box::new(format!("{:x}", self.address)),
-                    Box::new(self.x.to_string()),
-                    Box::new(self.y.to_string()),
                 ],
             )
         }

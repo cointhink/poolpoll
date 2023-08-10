@@ -24,14 +24,15 @@ fn main() {
     let abi_pool = ethabi::Contract::load(abi_file).unwrap();
     for pool_idx in 0..10 {
         let address = uniswap.pool_addr(&geth, pool_idx).unwrap();
-        let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address).unwrap();
+        let tokens = crate::uniswap::v2::Pool::tokens(&geth, &abi_pool, &address).unwrap();
         let pool = uniswap::v2::Pool {
             index: pool_idx as i32,
             address,
-            x: reserves.0,
-            y: reserves.1,
+            token0: tokens.0,
+            token1: tokens.1,
         };
-        log::info!("Uniswap v2 pool info #0 {:?}", pool);
+        let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address).unwrap();
+        log::info!("Uniswap v2 pool info #0 {:?} {:?}", pool, reserves);
         sql.insert(pool.to_sql());
     }
 }
