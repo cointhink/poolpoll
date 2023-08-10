@@ -28,8 +28,8 @@ fn main() {
         let pool = uniswap::v2::Pool {
             index: pool_idx as i32,
             address,
-            x: reserves.0.parse().unwrap(),
-            y: reserves.1.parse().unwrap(),
+            x: reserves.0,
+            y: reserves.1,
         };
         log::info!("Uniswap v2 pool info #0 {:?}", pool);
         sql.insert(pool.to_sql());

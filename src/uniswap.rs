@@ -8,6 +8,8 @@ pub mod v2 {
     use ethabi::token::Token;
     use ethabi::Contract;
     use ethereum_types::{Address, U256};
+    use rust_decimal::prelude::ToPrimitive;
+    use rust_decimal::Decimal;
     use sql_query_builder as sql;
     use std::str::FromStr;
 
@@ -22,15 +24,33 @@ pub mod v2 {
     }
 
     impl Pool {
-        pub fn reserves(
+        pub fn tokens(
             geth: &Client,
             abi: &Contract,
             address: &Address,
         ) -> Result<(String, String), Box<dyn std::error::Error>> {
-            log::info!("reserves address {:?}", hex::encode(address));
-            let result_t0 = geth.eth_call(hex::encode(address), abi, "token0", &vec![])?;
-            let result_t1 = geth.eth_call(hex::encode(address), abi, "token0", &vec![])?;
+            let address_hex = format!("0x{}", hex::encode(address));
+            let result_t0 = geth.eth_call(address_hex.clone(), abi, "token0", &vec![])?;
+            let result_t1 = geth.eth_call(address_hex.clone(), abi, "token1", &vec![])?;
             Ok((result_t0, result_t1))
+        }
+
+        pub fn reserves(
+            geth: &Client,
+            abi: &Contract,
+            address: &Address,
+        ) -> Result<(u128, u128), Box<dyn std::error::Error>> {
+            let address_hex = format!("0x{}", hex::encode(address));
+            log::info!("reserves address {:?}", address_hex);
+            let result = geth.eth_call(address_hex.clone(), abi, "getReserves", &vec![])?;
+            log::info!("reserves {:?} ", result);
+            // let r_t0 = result_t0.strip_prefix("0x").unwrap();
+            // log::info!("r_t0 {:?} r_t1 {:?}", r_t0, r_t1);
+            // let dt0 = Decimal::from_str_radix(&r_t0, 16).unwrap();
+            // log::info!("decimal t0 {:?} t1 {:?}", dt0, dt1);
+            // let d0: u128 = u128::from_str_radix(r_t0, 16).unwrap();
+            // log::info!("u128 t0 {:?} t1 {:?}", d0, d1);
+            Ok((1, 2))
         }
     }
 
