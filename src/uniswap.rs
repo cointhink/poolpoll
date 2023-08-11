@@ -22,7 +22,8 @@ pub mod v2 {
     }
 
     #[derive(Debug)]
-    pub(crate) struct Reserves {
+    pub(crate) struct Reserves<'a> {
+        pub pool: &'a Pool,
         pub block_number: u128,
         pub x: U256,
         pub y: U256,
@@ -57,17 +58,39 @@ pub mod v2 {
         }
     }
 
+    impl crate::sql::Ops for Reserves<'_> {
+        fn to_sql(&self) -> crate::sql::SqlQuery {
+            let select = sql::Insert::new()
+                .insert_into("reserves (pool_index, block_number, x, y)")
+                .values("($1, $2, $3, $4)")
+                .on_conflict(
+                    "(pool_index, block_number) DO UPDATE SET x = EXCLUDED.x, y = EXCLUDED.y;",
+                );
+            (
+                select.as_string(),
+                vec![
+                    Box::new(self.pool.index),
+                    Box::new(self.block_number as i32),
+                    Box::new(format!("{:x}", self.x)),
+                    Box::new(format!("{:x}", self.y)),
+                ],
+            )
+        }
+    }
+
     impl crate::sql::Ops for Pool {
         fn to_sql(&self) -> crate::sql::SqlQuery {
             let select = sql::Insert::new()
                 .insert_into("pools")
-                .values("($1, $2)")
-                .on_conflict("(index) DO UPDATE SET contract_address = EXCLUDED.contract_address;");
+                .values("($1, $2, $3, $4)")
+                .on_conflict("(index) DO UPDATE SET contract_address = EXCLUDED.contract_address, token0 = EXCLUDED.token0, token1 = EXCLUDED.token1;");
             (
                 select.as_string(),
                 vec![
                     Box::new(self.index),
                     Box::new(format!("{:x}", self.address)),
+                    Box::new(format!("{:x}", self.token0)),
+                    Box::new(format!("{:x}", self.token1)),
                 ],
             )
         }

@@ -32,8 +32,15 @@ fn main() {
             token1: tokens.1,
         };
         let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address).unwrap();
+        let pool_reserves = uniswap::v2::Reserves {
+            pool: &pool,
+            block_number: 0,
+            x: reserves.0,
+            y: reserves.1,
+        };
         log::info!("Uniswap v2 pool info #0 {:?} {:?}", pool, reserves);
         sql.insert(pool.to_sql());
+        sql.insert(pool_reserves.to_sql());
     }
 }
 

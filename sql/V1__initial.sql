@@ -17,3 +17,7 @@ CREATE TABLE reserves (
 */
 );
 
+CREATE UNIQUE INDEX reserves_pool_block ON reserves (pool_index, block_number);
+
+
+
