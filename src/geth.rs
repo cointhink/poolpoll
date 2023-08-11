@@ -37,6 +37,7 @@ impl Client {
             .unwrap();
         let tx = tx_build(to, function_call);
         let params = (tx, Some("latest".to_string()));
+        println!("geth {} {} {:?}", self.url, function_name, function_params);
         self.rpc_str("eth_call", ParamTypes::Infura(params))
     }
 
@@ -86,7 +87,6 @@ impl Client {
             method: method.to_string(),
             params: params,
         };
-        println!("geth {} {} {:?}", method, self.url, jrpc.params);
         let result = ureq::post(&self.url).send_json(&jrpc);
         match result {
             Ok(res) => {

@@ -71,8 +71,8 @@ pub mod v2 {
                 vec![
                     Box::new(self.pool.index),
                     Box::new(self.block_number as i32),
-                    Box::new(format!("{:x}", self.x)),
-                    Box::new(format!("{:x}", self.y)),
+                    Box::new(format!("{}", self.x)),
+                    Box::new(format!("{}", self.y)),
                 ],
             )
         }
