@@ -11,8 +11,10 @@ pub mod v2 {
     use ethereum_types::{Address, U256};
     use sql_query_builder as sql;
     use std::str::FromStr;
+    use std::sync::OnceLock;
 
     const UNISWAP_FACTORY: &str = "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
+    pub static ABI: OnceLock<Contract> = OnceLock::new();
 
     #[derive(Debug)]
     pub(crate) struct Pool {
@@ -97,20 +99,13 @@ pub mod v2 {
         }
     }
 
-    pub(crate) struct Factory {
-        abi: Contract,
-    }
+    pub(crate) struct Factory {}
 
     impl Factory {
-        pub(crate) fn new(abi: Contract) -> Self {
-            let _config = config::CONFIG.get().unwrap();
-            return Factory { abi: abi };
-        }
-
-        pub(crate) fn pool_count(&self, geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
+        pub(crate) fn pool_count(geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
             let result_str = geth.eth_call(
                 UNISWAP_FACTORY.to_string(),
-                &self.abi,
+                &ABI.get().unwrap(),
                 "allPairsLength",
                 &vec![],
             )?;
@@ -118,13 +113,12 @@ pub mod v2 {
         }
 
         pub(crate) fn pool_addr(
-            &self,
             geth: &Client,
             pool_id: u64,
         ) -> Result<Address, Box<dyn std::error::Error>> {
             let result_str = geth.eth_call(
                 UNISWAP_FACTORY.to_string(),
-                &self.abi,
+                &ABI.get().unwrap(),
                 "allPairs",
                 &vec![Token::Uint(pool_id.into())],
             )?;
