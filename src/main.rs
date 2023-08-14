@@ -47,8 +47,8 @@ fn main() {
             y: reserves.1,
         };
         log::info!("Uniswap v2 pool info #0 {:?} {:?}", pool, reserves);
-        sql.insert(pool.to_sql());
-        sql.insert(pool_reserves.to_sql());
+        sql.insert(pool.to_upsert_sql());
+        sql.insert(pool_reserves.to_upsert_sql());
     }
 }
 

@@ -6,11 +6,11 @@ use postgres::types::ToSql;
 pub type SqlQuery = (String, Vec<Box<dyn ToSql + Sync>>);
 
 pub trait Ops {
-    fn to_sql(&self) -> SqlQuery;
+    fn to_upsert_sql(&self) -> SqlQuery;
 }
 
 impl dyn Ops {
-    pub fn to_insert_sql(
+    pub fn upsert_sql(
         table_name: &str,
         column_index_names: Vec<&str>,
         column_other_names: Vec<&str>,
@@ -24,8 +24,6 @@ impl dyn Ops {
             .map(|x| format!("${}", x))
             .collect::<Vec<_>>()
             .join(", ");
-        let values = format!("({})", value_positions);
-        // "(pool_index, block_number) DO UPDATE SET x = EXCLUDED.x, y = EXCLUDED.y;",
         let conflict = format!(
             "({}) DO UPDATE SET {}",
             column_index_names.join(", "),
@@ -37,7 +35,7 @@ impl dyn Ops {
         );
         let select = sql::Insert::new()
             .insert_into(&format!("{} ({})", table_name, all_names.join(", ")))
-            .values(&values)
+            .values(&format!("({})", value_positions))
             .on_conflict(&conflict);
         (select.as_string(), column_values)
         // let select = sql::Insert::new()

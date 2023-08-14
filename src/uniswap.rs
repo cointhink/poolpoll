@@ -61,8 +61,8 @@ pub mod v2 {
     }
 
     impl crate::sql::Ops for Reserves<'_> {
-        fn to_sql(&self) -> crate::sql::SqlQuery {
-            <dyn crate::Ops>::to_insert_sql(
+        fn to_upsert_sql(&self) -> crate::sql::SqlQuery {
+            <dyn crate::Ops>::upsert_sql(
                 "reserves",
                 vec!["pool_index", "block_number"],
                 vec!["x", "y"],
@@ -77,9 +77,9 @@ pub mod v2 {
     }
 
     impl crate::sql::Ops for Pool {
-        fn to_sql(&self) -> crate::sql::SqlQuery {
-            <dyn crate::Ops>::to_insert_sql(
-                "reserves",
+        fn to_upsert_sql(&self) -> crate::sql::SqlQuery {
+            <dyn crate::Ops>::upsert_sql(
+                "pools",
                 vec!["index"],
                 vec!["contract_address", "token0", "token1"],
                 vec![
