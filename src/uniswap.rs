@@ -3,7 +3,6 @@ pub mod v3 {
 }
 
 pub mod v2 {
-    use crate::config;
     use crate::erc20::Erc20;
     use crate::geth::Client;
     use ethabi::token::Token;
@@ -63,14 +62,10 @@ pub mod v2 {
 
     impl crate::sql::Ops for Reserves<'_> {
         fn to_sql(&self) -> crate::sql::SqlQuery {
-            let select = sql::Insert::new()
-                .insert_into("reserves (pool_index, block_number, x, y)")
-                .values("($1, $2, $3, $4)")
-                .on_conflict(
-                    "(pool_index, block_number) DO UPDATE SET x = EXCLUDED.x, y = EXCLUDED.y;",
-                );
-            (
-                select.as_string(),
+            <dyn crate::Ops>::to_insert_sql(
+                "reserves",
+                vec!["pool_index", "block_number"],
+                vec!["x", "y"],
                 vec![
                     Box::new(self.pool.index),
                     Box::new(self.block_number as i32),
@@ -83,12 +78,10 @@ pub mod v2 {
 
     impl crate::sql::Ops for Pool {
         fn to_sql(&self) -> crate::sql::SqlQuery {
-            let select = sql::Insert::new()
-                .insert_into("pools")
-                .values("($1, $2, $3, $4)")
-                .on_conflict("(index) DO UPDATE SET contract_address = EXCLUDED.contract_address, token0 = EXCLUDED.token0, token1 = EXCLUDED.token1;");
-            (
-                select.as_string(),
+            <dyn crate::Ops>::to_insert_sql(
+                "reserves",
+                vec!["index"],
+                vec!["contract_address", "token0", "token1"],
                 vec![
                     Box::new(self.index),
                     Box::new(format!("{:x}", self.address)),

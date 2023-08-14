@@ -13,9 +13,9 @@ pub struct Erc20 {
 }
 
 impl Erc20 {
-    fn name(&self, geth: &Client, abi: &Contract) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn name(&self, geth: &Client) -> Result<String, Box<dyn std::error::Error>> {
         let address_hex = format!("0x{}", hex::encode(self.address));
-        let result = geth.eth_call(address_hex.clone(), abi, "name", &vec![])?;
+        let result = geth.eth_call(address_hex.clone(), &ABI.get().unwrap(), "name", &vec![])?;
         Ok(result)
     }
 }
