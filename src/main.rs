@@ -1,6 +1,8 @@
+use crate::erc20::Erc20;
 use crate::sql::Ops;
 
 mod config;
+mod erc20;
 mod geth;
 mod log;
 mod sql;
@@ -28,8 +30,8 @@ fn main() {
         let pool = uniswap::v2::Pool {
             index: pool_idx as i32,
             address,
-            token0: tokens.0,
-            token1: tokens.1,
+            token0: Erc20 { address: tokens.0 },
+            token1: Erc20 { address: tokens.1 },
         };
         let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address).unwrap();
         let pool_reserves = uniswap::v2::Reserves {

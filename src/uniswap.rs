@@ -4,6 +4,7 @@ pub mod v3 {
 
 pub mod v2 {
     use crate::config;
+    use crate::erc20::Erc20;
     use crate::geth::Client;
     use ethabi::token::Token;
     use ethabi::Contract;
@@ -17,8 +18,8 @@ pub mod v2 {
     pub(crate) struct Pool {
         pub index: i32,
         pub address: Address,
-        pub token0: Address,
-        pub token1: Address,
+        pub token0: Erc20,
+        pub token1: Erc20,
     }
 
     #[derive(Debug)]
@@ -89,8 +90,8 @@ pub mod v2 {
                 vec![
                     Box::new(self.index),
                     Box::new(format!("{:x}", self.address)),
-                    Box::new(format!("{:x}", self.token0)),
-                    Box::new(format!("{:x}", self.token1)),
+                    Box::new(format!("{:x}", self.token0.address)),
+                    Box::new(format!("{:x}", self.token1.address)),
                 ],
             )
         }
