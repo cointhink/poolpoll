@@ -66,7 +66,7 @@ pub mod v2 {
                 vec!["contract_address", "block_number"],
                 vec!["x", "y"],
                 vec![
-                    Box::new(format!("{}", self.pool.contract_address)),
+                    Box::new(format!("{:x}", self.pool.contract_address)),
                     Box::new(self.block_number as i32),
                     Box::new(format!("{}", self.x)),
                     Box::new(format!("{}", self.y)),
