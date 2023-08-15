@@ -38,7 +38,8 @@ fn main() {
             token0: Erc20 { address: tokens.0 },
             token1: Erc20 { address: tokens.1 },
         };
-        pool.token0.name(&geth).unwrap();
+        let token0_name = pool.token0.name(&geth).unwrap();
+        log::info!("token0 {:?}", token0_name);
         let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address).unwrap();
         let pool_reserves = uniswap::v2::Reserves {
             pool: &pool,

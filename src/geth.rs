@@ -29,16 +29,18 @@ impl Client {
         abi: &Contract,
         function_name: &str,
         function_params: &[Token],
-    ) -> Result<String, Box<dyn std::error::Error>> {
-        let function_call = abi
-            .function(function_name)
-            .unwrap()
-            .encode_input(function_params)
-            .unwrap();
-        let tx = tx_build(to, function_call);
+    ) -> Result<Vec<Token>, Box<dyn std::error::Error>> {
+        let function_call = abi.function(function_name).unwrap();
+        let function_input = function_call.encode_input(function_params).unwrap();
+        let tx = tx_build(to, function_input);
         let params = (tx, Some("latest".to_string()));
         println!("geth {} {} {:?}", self.url, function_name, function_params);
-        self.rpc_str("eth_call", ParamTypes::Infura(params))
+        let output = self.rpc_str("eth_call", ParamTypes::Infura(params))?;
+        let output_bytes = hex::decode(output.strip_prefix("0x").unwrap()).unwrap();
+        match function_call.decode_output(&output_bytes) {
+            Err(e) => Err(Box::new(e)),
+            Ok(tokens) => Ok(tokens),
+        }
     }
 
     pub fn rpc_str(

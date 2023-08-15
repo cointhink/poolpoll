@@ -38,12 +38,10 @@ pub mod v2 {
         ) -> Result<(Address, Address), Box<dyn std::error::Error>> {
             let address_hex = format!("0x{}", hex::encode(address));
             let result_t0 = geth.eth_call(address_hex.clone(), abi, "token0", &vec![])?;
+            let Token::Address(addr_t0) = result_t0[0] else { println!("{:?}", result_t0[0]); unreachable!() };
             let result_t1 = geth.eth_call(address_hex.clone(), abi, "token1", &vec![])?;
-            println!("token0 {}", &result_t0[26..]);
-            Ok((
-                Address::from_str(&result_t0[26..]).unwrap(),
-                Address::from_str(&result_t1[26..]).unwrap(),
-            ))
+            let Token::Address(addr_t1) = result_t1[0] else { println!("{:?}", result_t1[0]); unreachable!() };
+            Ok((addr_t0, addr_t1))
         }
 
         pub fn reserves(
@@ -53,9 +51,9 @@ pub mod v2 {
         ) -> Result<(U256, U256), Box<dyn std::error::Error>> {
             let address_hex = format!("0x{}", hex::encode(address));
             let result = geth.eth_call(address_hex.clone(), abi, "getReserves", &vec![])?;
-            let t0 = U256::from_str_radix(&result[2..66], 16).unwrap();
-            let t1 = U256::from_str_radix(&result[66..130], 16).unwrap();
-            Ok((t0, t1))
+            let Token::Uint(r0) = result[0] else { println!("{:?}", result[0]); unreachable!() };
+            let Token::Uint(r1) = result[1] else { unreachable!() };
+            Ok((r0, r1))
         }
     }
 
@@ -95,27 +93,28 @@ pub mod v2 {
 
     impl Factory {
         pub(crate) fn pool_count(geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
-            let result_str = geth.eth_call(
+            let result = geth.eth_call(
                 UNISWAP_FACTORY.to_string(),
                 &ABI.get().unwrap(),
                 "allPairsLength",
                 &vec![],
             )?;
-            return Ok(U256::from_str_radix(&result_str, 16)?);
+            let Token::Uint(count) = result[0] else { println!("{:?}", result[0]); unreachable!() };
+            return Ok(count);
         }
 
         pub(crate) fn pool_addr(
             geth: &Client,
             pool_id: u64,
         ) -> Result<Address, Box<dyn std::error::Error>> {
-            let result_str = geth.eth_call(
+            let result = geth.eth_call(
                 UNISWAP_FACTORY.to_string(),
                 &ABI.get().unwrap(),
                 "allPairs",
                 &vec![Token::Uint(pool_id.into())],
             )?;
-            let short_rs = &result_str[result_str.len() - 40..];
-            return Ok(Address::from_str(short_rs).unwrap());
+            let Token::Address(addr) = result[0] else { unreachable!() };
+            return Ok(addr);
         }
     }
 }
