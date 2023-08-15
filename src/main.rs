@@ -33,8 +33,8 @@ fn main() {
         let address = uniswap::v2::Factory::pool_addr(&geth, pool_idx).unwrap();
         let tokens = crate::uniswap::v2::Pool::tokens(&geth, &abi_pool, &address).unwrap();
         let pool = uniswap::v2::Pool {
-            index: pool_idx as i32,
-            address,
+            uniswap_v2_index: pool_idx as i32,
+            contract_address: address,
             token0: Erc20 { address: tokens.0 },
             token1: Erc20 { address: tokens.1 },
         };

@@ -1,15 +1,16 @@
 CREATE TABLE pools (
-    index INTEGER PRIMARY KEY,
-    contract_address VARCHAR(40),
+    contract_address VARCHAR(40) PRIMARY KEY,
+    uniswap_v2_index INTEGER UNIQUE,
     token0 VARCHAR(40),
     token1 VARCHAR(40)
 );
 
 CREATE TABLE reserves (
-    pool_index INTEGER,
+    contract_address VARCHAR(40) PRIMARY KEY,
     block_number INTEGER,
     x VARCHAR(78),
-    y VARCHAR(78)
+    y VARCHAR(78),
+    unique (contract_address, block_number)
 
 /*
     x NUMERIC(78),
@@ -17,7 +18,9 @@ CREATE TABLE reserves (
 */
 );
 
-CREATE UNIQUE INDEX reserves_pool_block ON reserves (pool_index, block_number);
-
-
+CREATE TABLE coins (
+    contract_address VARCHAR(40) PRIMARY KEY,
+    name VARCHAR(255),
+    symbol VARCHAR(255)
+);
 

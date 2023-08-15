@@ -8,7 +8,6 @@ pub mod v2 {
     use ethabi::token::Token;
     use ethabi::Contract;
     use ethereum_types::{Address, U256};
-    use sql_query_builder as sql;
     use std::str::FromStr;
     use std::sync::OnceLock;
 
@@ -17,8 +16,8 @@ pub mod v2 {
 
     #[derive(Debug)]
     pub(crate) struct Pool {
-        pub index: i32,
-        pub address: Address,
+        pub uniswap_v2_index: i32,
+        pub contract_address: Address,
         pub token0: Erc20,
         pub token1: Erc20,
     }
@@ -64,10 +63,10 @@ pub mod v2 {
         fn to_upsert_sql(&self) -> crate::sql::SqlQuery {
             <dyn crate::Ops>::upsert_sql(
                 "reserves",
-                vec!["pool_index", "block_number"],
+                vec!["contract_address", "block_number"],
                 vec!["x", "y"],
                 vec![
-                    Box::new(self.pool.index),
+                    Box::new(format!("{}", self.pool.contract_address)),
                     Box::new(self.block_number as i32),
                     Box::new(format!("{}", self.x)),
                     Box::new(format!("{}", self.y)),
@@ -80,11 +79,11 @@ pub mod v2 {
         fn to_upsert_sql(&self) -> crate::sql::SqlQuery {
             <dyn crate::Ops>::upsert_sql(
                 "pools",
-                vec!["index"],
-                vec!["contract_address", "token0", "token1"],
+                vec!["contract_address"],
+                vec!["uniswap_v2_index", "token0", "token1"],
                 vec![
-                    Box::new(self.index),
-                    Box::new(format!("{:x}", self.address)),
+                    Box::new(format!("{:x}", self.contract_address)),
+                    Box::new(self.uniswap_v2_index),
                     Box::new(format!("{:x}", self.token0.address)),
                     Box::new(format!("{:x}", self.token1.address)),
                 ],
