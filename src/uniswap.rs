@@ -3,12 +3,10 @@ pub mod v3 {
 }
 
 pub mod v2 {
-    use crate::erc20::Erc20;
     use crate::geth::Client;
     use ethabi::token::Token;
     use ethabi::Contract;
     use ethereum_types::{Address, U256};
-    use std::str::FromStr;
     use std::sync::OnceLock;
 
     const UNISWAP_FACTORY: &str = "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
@@ -18,8 +16,8 @@ pub mod v2 {
     pub(crate) struct Pool {
         pub uniswap_v2_index: i32,
         pub contract_address: Address,
-        pub token0: Erc20,
-        pub token1: Erc20,
+        pub token0: Address,
+        pub token1: Address,
     }
 
     #[derive(Debug)]
@@ -82,8 +80,8 @@ pub mod v2 {
                 vec![
                     Box::new(format!("{:x}", self.contract_address)),
                     Box::new(self.uniswap_v2_index),
-                    Box::new(format!("{:x}", self.token0.address)),
-                    Box::new(format!("{:x}", self.token1.address)),
+                    Box::new(format!("{:x}", self.token0)),
+                    Box::new(format!("{:x}", self.token1)),
                 ],
             )
         }
