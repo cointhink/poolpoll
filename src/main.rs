@@ -1,7 +1,6 @@
 use crate::coin::Coin;
 use crate::erc20::Erc20;
 use crate::sql::Ops;
-use ethereum_types::Address;
 
 mod coin;
 mod config;
@@ -43,13 +42,24 @@ fn main() {
         };
         let token0 = Erc20 { address: tokens.0 };
         let token0_name = token0.name(&geth).unwrap();
+        let token0_symbol = token0.symbol(&geth).unwrap();
         let coin0 = Coin {
-            address: token0.address,
+            contract_address: token0.address,
             name: token0_name,
+            symbol: token0_symbol,
         };
         log::info!("coin0{:?}", coin0);
+        sql.insert(coin0.to_upsert_sql());
+
         let token1 = Erc20 { address: tokens.1 };
         let token1_name = token1.name(&geth).unwrap();
+        let token1_symbol = token1.symbol(&geth).unwrap();
+        let coin1 = Coin {
+            contract_address: token1.address,
+            name: token1_name,
+            symbol: token1_symbol,
+        };
+        sql.insert(coin1.to_upsert_sql());
 
         let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address).unwrap();
         let pool_reserves = uniswap::v2::Reserves {

@@ -18,4 +18,10 @@ impl Erc20 {
         let Token::String(name) = &result[0] else { unreachable!() };
         Ok(name.to_owned())
     }
+    pub fn symbol(&self, geth: &Client) -> Result<String, Box<dyn std::error::Error>> {
+        let address_hex = format!("0x{}", hex::encode(self.address));
+        let result = geth.eth_call(address_hex.clone(), &ABI.get().unwrap(), "symbol", &vec![])?;
+        let Token::String(name) = &result[0] else { unreachable!() };
+        Ok(name.to_owned())
+    }
 }
