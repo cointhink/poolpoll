@@ -1,6 +1,7 @@
 use bs58;
 use ethabi::token::Token;
 use ethabi::Contract;
+use ethereum_types::Address;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -25,14 +26,15 @@ impl Client {
 
     pub fn eth_call(
         &self,
-        to: String,
+        to: &Address,
         abi: &Contract,
         function_name: &str,
         function_params: &[Token],
     ) -> Result<Vec<Token>, Box<dyn std::error::Error>> {
         let function_call = abi.function(function_name).unwrap();
         let function_input = function_call.encode_input(function_params).unwrap();
-        let tx = tx_build(to, function_input);
+        let to_hex = format!("0x{}", hex::encode(to));
+        let tx = tx_build(to_hex, function_input);
         let params = (tx, Some("latest".to_string()));
         println!("geth {} {} {:?}", self.url, function_name, function_params);
         let output = self.rpc_str("eth_call", ParamTypes::Infura(params))?;

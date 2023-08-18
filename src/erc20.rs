@@ -13,14 +13,12 @@ pub struct Erc20 {
 
 impl Erc20 {
     pub fn name(&self, geth: &Client) -> Result<String, Box<dyn std::error::Error>> {
-        let address_hex = format!("0x{}", hex::encode(self.address));
-        let result = geth.eth_call(address_hex.clone(), &ABI.get().unwrap(), "name", &vec![])?;
+        let result = geth.eth_call(&self.address, &ABI.get().unwrap(), "name", &vec![])?;
         let Token::String(name) = &result[0] else { unreachable!() };
         Ok(name.to_owned())
     }
     pub fn symbol(&self, geth: &Client) -> Result<String, Box<dyn std::error::Error>> {
-        let address_hex = format!("0x{}", hex::encode(self.address));
-        let result = geth.eth_call(address_hex.clone(), &ABI.get().unwrap(), "symbol", &vec![])?;
+        let result = geth.eth_call(&self.address, &ABI.get().unwrap(), "symbol", &vec![])?;
         let Token::String(name) = &result[0] else { unreachable!() };
         Ok(name.to_owned())
     }

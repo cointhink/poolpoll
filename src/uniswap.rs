@@ -9,7 +9,7 @@ pub mod v2 {
     use ethereum_types::{Address, U256};
     use std::sync::OnceLock;
 
-    const UNISWAP_FACTORY: &str = "0x5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
+    const UNISWAP_FACTORY: &str = "5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
     pub static ABI: OnceLock<Contract> = OnceLock::new();
 
     #[derive(Debug)]
@@ -34,10 +34,9 @@ pub mod v2 {
             abi: &Contract,
             address: &Address,
         ) -> Result<(Address, Address), Box<dyn std::error::Error>> {
-            let address_hex = format!("0x{}", hex::encode(address));
-            let result_t0 = geth.eth_call(address_hex.clone(), abi, "token0", &vec![])?;
+            let result_t0 = geth.eth_call(address, abi, "token0", &vec![])?;
             let Token::Address(addr_t0) = result_t0[0] else { println!("{:?}", result_t0[0]); unreachable!() };
-            let result_t1 = geth.eth_call(address_hex.clone(), abi, "token1", &vec![])?;
+            let result_t1 = geth.eth_call(address, abi, "token1", &vec![])?;
             let Token::Address(addr_t1) = result_t1[0] else { println!("{:?}", result_t1[0]); unreachable!() };
             Ok((addr_t0, addr_t1))
         }
@@ -47,8 +46,7 @@ pub mod v2 {
             abi: &Contract,
             address: &Address,
         ) -> Result<(U256, U256), Box<dyn std::error::Error>> {
-            let address_hex = format!("0x{}", hex::encode(address));
-            let result = geth.eth_call(address_hex.clone(), abi, "getReserves", &vec![])?;
+            let result = geth.eth_call(address, abi, "getReserves", &vec![])?;
             let Token::Uint(r0) = result[0] else { println!("{:?}", result[0]); unreachable!() };
             let Token::Uint(r1) = result[1] else { unreachable!() };
             Ok((r0, r1))
@@ -91,12 +89,8 @@ pub mod v2 {
 
     impl Factory {
         pub(crate) fn pool_count(geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
-            let result = geth.eth_call(
-                UNISWAP_FACTORY.to_string(),
-                &ABI.get().unwrap(),
-                "allPairsLength",
-                &vec![],
-            )?;
+            let factory = Address::from_slice(&hex::decode(UNISWAP_FACTORY).unwrap());
+            let result = geth.eth_call(&factory, &ABI.get().unwrap(), "allPairsLength", &vec![])?;
             let Token::Uint(count) = result[0] else { println!("{:?}", result[0]); unreachable!() };
             return Ok(count);
         }
@@ -105,8 +99,9 @@ pub mod v2 {
             geth: &Client,
             pool_id: u64,
         ) -> Result<Address, Box<dyn std::error::Error>> {
+            let factory = Address::from_slice(&hex::decode(UNISWAP_FACTORY).unwrap());
             let result = geth.eth_call(
-                UNISWAP_FACTORY.to_string(),
+                &factory,
                 &ABI.get().unwrap(),
                 "allPairs",
                 &vec![Token::Uint(pool_id.into())],
