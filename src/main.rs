@@ -28,10 +28,19 @@ fn main() {
     let abi_factory = ethabi::Contract::load(abi_file).unwrap();
     uniswap::v2::ABI.set(abi_factory).unwrap();
     let pool_count = uniswap::v2::Factory::pool_count(&geth);
-    log::info!("Uniswap v2 contract count {:?}", pool_count);
+    let max_pool = sql_query_builder::Select::new()
+        .select("max(uniswap_v2_index)")
+        .from("pools");
+    let sql_pool_count_rows = sql.q((max_pool.to_string(), vec![]));
+    let sql_pool_count = sql_pool_count_rows[0].get::<&str, i32>("max") as u64;
+    log::info!(
+        "Uniswap v2 contract count {:?} (db highest {:?})",
+        pool_count,
+        sql_pool_count
+    );
     let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
     let abi_pool = ethabi::Contract::load(abi_file).unwrap();
-    for pool_idx in 0..10 {
+    for pool_idx in sql_pool_count..sql_pool_count + 10 {
         let address = uniswap::v2::Factory::pool_addr(&geth, pool_idx).unwrap();
         let tokens = crate::uniswap::v2::Pool::tokens(&geth, &abi_pool, &address).unwrap();
         let pool = uniswap::v2::Pool {

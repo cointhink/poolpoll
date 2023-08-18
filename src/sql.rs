@@ -71,15 +71,10 @@ pub(crate) fn new() -> Client {
 }
 
 impl Client {
-    /*
-    pub fn q(&mut self) {
-        let q = sql_query_builder::Select::new().select("*").from("pools");
-        log::info!("{}", q.to_string());
-        let rows = self.client.query(&q.to_string(), &[]).unwrap();
-        log::info!("rows: {:?}", rows);
-        log::info!("0.0: {:?}", rows[0].get::<&str, String>("address"));
+    pub fn q(&mut self, query: SqlQuery) -> Vec<postgres::Row> {
+        let params: Vec<&(dyn ToSql + Sync)> = query.1.iter().map(|y| &**y).collect();
+        self.client.query(&query.0, &params).unwrap()
     }
-    */
 
     pub fn insert(&mut self, query: SqlQuery) {
         log::info!("sql: {} {:?}", query.0, query.1);
@@ -91,9 +86,6 @@ impl Client {
 
         //  params: &[&(dyn ToSql + Sync)]
         self.client.execute(&query.0, &params).unwrap();
-
-        // this says an in-place array conversion works, but it doesnt work in any other case
-        //self.client.execute(&query.0, &[&yes]).unwrap();
     }
 }
 
