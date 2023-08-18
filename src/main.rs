@@ -32,7 +32,10 @@ fn main() {
         .select("max(uniswap_v2_index)")
         .from("pools");
     let sql_pool_count_rows = sql.q((max_pool.to_string(), vec![]));
-    let sql_pool_count = sql_pool_count_rows[0].get::<&str, i32>("max") as u64;
+    let sql_pool_count = match sql_pool_count_rows[0].try_get::<&str, i32>("max") {
+        Ok(count) => count as u64,
+        Err(_) => 0,
+    };
     log::info!(
         "Uniswap v2 contract count {:?} (db highest {:?})",
         pool_count,
