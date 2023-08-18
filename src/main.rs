@@ -43,10 +43,12 @@ fn main() {
         let token0 = Erc20 { address: tokens.0 };
         let token0_name = token0.name(&geth).unwrap();
         let token0_symbol = token0.symbol(&geth).unwrap();
+        let token0_decimals = token0.decimals(&geth).unwrap();
         let coin0 = Coin {
             contract_address: token0.address,
             name: token0_name,
             symbol: token0_symbol,
+            decimals: token0_decimals,
         };
         log::info!("coin0{:?}", coin0);
         sql.insert(coin0.to_upsert_sql());
@@ -54,10 +56,12 @@ fn main() {
         let token1 = Erc20 { address: tokens.1 };
         let token1_name = token1.name(&geth).unwrap();
         let token1_symbol = token1.symbol(&geth).unwrap();
+        let token1_decimals = token1.decimals(&geth).unwrap();
         let coin1 = Coin {
             contract_address: token1.address,
             name: token1_name,
             symbol: token1_symbol,
+            decimals: token1_decimals,
         };
         sql.insert(coin1.to_upsert_sql());
 

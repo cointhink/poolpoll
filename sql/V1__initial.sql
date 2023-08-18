@@ -21,6 +21,7 @@ CREATE TABLE reserves (
 CREATE TABLE coins (
     contract_address VARCHAR(40) PRIMARY KEY,
     name VARCHAR(255),
-    symbol VARCHAR(255)
+    symbol VARCHAR(255),
+    decimals INTEGER
 );
 
