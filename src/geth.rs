@@ -38,9 +38,10 @@ impl Client {
         let params = (tx, Some("latest".to_string()));
         println!("geth {} {} {:?}", self.url, function_name, function_params);
         let output = self.rpc_str("eth_call", ParamTypes::Infura(params))?;
-        let output_bytes = hex::decode(output.strip_prefix("0x").unwrap()).unwrap();
+        let output_no_0x = output.strip_prefix("0x").unwrap();
+        let output_bytes = hex::decode(output_no_0x).unwrap();
         match function_call.decode_output(&output_bytes) {
-            Err(e) => Err(Box::new(e)),
+            Err(_) => Err(output_no_0x.into()),
             Ok(tokens) => Ok(tokens),
         }
     }

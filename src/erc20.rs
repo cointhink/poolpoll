@@ -12,16 +12,26 @@ pub struct Erc20 {
     pub address: Address,
 }
 
+fn hex_to_ascii(str: &str) -> String {
+    let utf8_bytes_null = hex::decode(str.to_string()).unwrap();
+    let pos0 = utf8_bytes_null.iter().position(|&r| r == 0).unwrap();
+    std::str::from_utf8(&utf8_bytes_null[0..pos0])
+        .unwrap()
+        .to_owned()
+}
+
 impl Erc20 {
     pub fn name(&self, geth: &Client) -> Result<String, Box<dyn std::error::Error>> {
-        let result = geth.eth_call(&self.address, &ABI.get().unwrap(), "name", &vec![])?;
-        let Token::String(name) = &result[0] else { unreachable!() };
-        Ok(name.to_owned())
+        match geth.eth_call(&self.address, &ABI.get().unwrap(), "name", &vec![]) {
+            Ok(tokens) => Ok(tokens[0].to_string()),
+            Err(e) => Ok(hex_to_ascii(&e.to_string())),
+        }
     }
     pub fn symbol(&self, geth: &Client) -> Result<String, Box<dyn std::error::Error>> {
-        let result = geth.eth_call(&self.address, &ABI.get().unwrap(), "symbol", &vec![])?;
-        let Token::String(symbol) = &result[0] else { unreachable!() };
-        Ok(symbol.to_owned())
+        match geth.eth_call(&self.address, &ABI.get().unwrap(), "symbol", &vec![]) {
+            Ok(tokens) => Ok(tokens[0].to_string()),
+            Err(e) => Ok(hex_to_ascii(&e.to_string())),
+        }
     }
     pub fn decimals(&self, geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
         let result = geth.eth_call(&self.address, &ABI.get().unwrap(), "decimals", &vec![])?;
