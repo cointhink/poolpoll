@@ -19,6 +19,8 @@ fn main() {
     let mut sql = sql::new();
 
     let geth = geth::Client::build(&config.geth_url, &config.infura_key);
+    let last_block = geth.last_block();
+    log::info!("eth block {}", last_block);
     let abi_file = std::fs::File::open("abi/ERC20.json").unwrap();
     erc20::ABI
         .set(ethabi::Contract::load(abi_file).unwrap())

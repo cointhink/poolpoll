@@ -68,9 +68,7 @@ impl Client {
     }
 
     pub fn last_block(&self) -> u32 {
-        let blk_num_str = self
-            .rpc_str("eth_blockNumber", ParamTypes::Single(("".to_string(),)))
-            .unwrap();
+        let blk_num_str = self.rpc_str("eth_blockNumber", ParamTypes::Empty).unwrap();
         u32::from_str_radix(&blk_num_str[2..], 16).unwrap()
     }
 
@@ -92,6 +90,7 @@ impl Client {
             method: method.to_string(),
             params: params,
         };
+        log::info!("{}", serde_json::to_string(&jrpc).unwrap());
         let result = ureq::post(&self.url).send_json(&jrpc);
         match result {
             Ok(res) => {
@@ -122,6 +121,7 @@ pub struct JsonRpc {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum ParamTypes {
+    Empty,
     Standard(JsonRpcParam),
     Single(SingleParam),
     Infura(JsonInfuraRpcParam),
