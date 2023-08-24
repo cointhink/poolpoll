@@ -82,7 +82,7 @@ fn main() {
         let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address, eth_block).unwrap();
         let pool_reserves = uniswap::v2::Reserves {
             pool: &pool,
-            block_number: 0,
+            block_number: eth_block as u128,
             x: reserves.0,
             y: reserves.1,
         };

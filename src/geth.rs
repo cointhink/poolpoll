@@ -37,10 +37,10 @@ impl Client {
         let to_hex = format!("0x{}", hex::encode(to));
         let tx = tx_build(to_hex, function_input);
         let block = match eth_block {
-            Some(num) => num.to_string(),
+            Some(num) => format!("0x{:x}", num),
             None => "latest".to_string(),
         };
-        let params = (tx, Some(block));
+        let params = (tx, block);
         println!("geth {} {} {:?}", self.url, function_name, function_params);
         let output = self.rpc_str("eth_call", ParamTypes::Infura(params))?;
         let output_no_0x = output.strip_prefix("0x").unwrap();
@@ -136,7 +136,7 @@ pub enum ParamTypes {
 pub type JsonRpcParam = HashMap<String, String>;
 pub type SingleParam = (String,);
 pub type InfuraSingleParam = (String, String);
-pub type JsonInfuraRpcParam = (JsonRpcParam, Option<String>);
+pub type JsonInfuraRpcParam = (JsonRpcParam, String);
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonRpcResult {

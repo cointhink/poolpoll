@@ -47,7 +47,7 @@ pub mod v2 {
             address: &Address,
             eth_block: u32,
         ) -> Result<(U256, U256), Box<dyn std::error::Error>> {
-            let result = geth.eth_call(address, abi, "getReserves", &vec![], None)?;
+            let result = geth.eth_call(address, abi, "getReserves", &vec![], Some(eth_block))?;
             let Token::Uint(r0) = result[0] else { println!("{:?}", result[0]); unreachable!() };
             let Token::Uint(r1) = result[1] else { unreachable!() };
             Ok((r0, r1))

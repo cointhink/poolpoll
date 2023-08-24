@@ -6,7 +6,7 @@ CREATE TABLE pools (
 );
 
 CREATE TABLE reserves (
-    contract_address VARCHAR(40) PRIMARY KEY,
+    contract_address VARCHAR(40),
     block_number INTEGER,
     x VARCHAR(78),
     y VARCHAR(78),
