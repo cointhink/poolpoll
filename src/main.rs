@@ -19,8 +19,8 @@ fn main() {
     let mut sql = sql::new();
 
     let geth = geth::Client::build(&config.geth_url, &config.infura_key);
-    let last_block = geth.last_block();
-    log::info!("eth block {}", last_block);
+    let eth_block = geth.last_block();
+    log::info!("eth block {}", eth_block);
     let abi_file = std::fs::File::open("abi/ERC20.json").unwrap();
     erc20::ABI
         .set(ethabi::Contract::load(abi_file).unwrap())
@@ -79,7 +79,7 @@ fn main() {
         };
         sql.insert(coin1.to_upsert_sql());
 
-        let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address).unwrap();
+        let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address, eth_block).unwrap();
         let pool_reserves = uniswap::v2::Reserves {
             pool: &pool,
             block_number: 0,

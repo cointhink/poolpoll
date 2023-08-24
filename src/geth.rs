@@ -30,12 +30,17 @@ impl Client {
         abi: &Contract,
         function_name: &str,
         function_params: &[Token],
+        eth_block: Option<u32>,
     ) -> Result<Vec<Token>, Box<dyn std::error::Error>> {
         let function_call = abi.function(function_name).unwrap();
         let function_input = function_call.encode_input(function_params).unwrap();
         let to_hex = format!("0x{}", hex::encode(to));
         let tx = tx_build(to_hex, function_input);
-        let params = (tx, Some("latest".to_string()));
+        let block = match eth_block {
+            Some(num) => num.to_string(),
+            None => "latest".to_string(),
+        };
+        let params = (tx, Some(block));
         println!("geth {} {} {:?}", self.url, function_name, function_params);
         let output = self.rpc_str("eth_call", ParamTypes::Infura(params))?;
         let output_no_0x = output.strip_prefix("0x").unwrap();

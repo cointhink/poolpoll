@@ -34,9 +34,9 @@ pub mod v2 {
             abi: &Contract,
             address: &Address,
         ) -> Result<(Address, Address), Box<dyn std::error::Error>> {
-            let result_t0 = geth.eth_call(address, abi, "token0", &vec![])?;
+            let result_t0 = geth.eth_call(address, abi, "token0", &vec![], None)?;
             let Token::Address(addr_t0) = result_t0[0] else { println!("{:?}", result_t0[0]); unreachable!() };
-            let result_t1 = geth.eth_call(address, abi, "token1", &vec![])?;
+            let result_t1 = geth.eth_call(address, abi, "token1", &vec![], None)?;
             let Token::Address(addr_t1) = result_t1[0] else { println!("{:?}", result_t1[0]); unreachable!() };
             Ok((addr_t0, addr_t1))
         }
@@ -45,8 +45,9 @@ pub mod v2 {
             geth: &Client,
             abi: &Contract,
             address: &Address,
+            eth_block: u32,
         ) -> Result<(U256, U256), Box<dyn std::error::Error>> {
-            let result = geth.eth_call(address, abi, "getReserves", &vec![])?;
+            let result = geth.eth_call(address, abi, "getReserves", &vec![], None)?;
             let Token::Uint(r0) = result[0] else { println!("{:?}", result[0]); unreachable!() };
             let Token::Uint(r1) = result[1] else { unreachable!() };
             Ok((r0, r1))
@@ -90,7 +91,13 @@ pub mod v2 {
     impl Factory {
         pub(crate) fn pool_count(geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
             let factory = Address::from_slice(&hex::decode(UNISWAP_FACTORY).unwrap());
-            let result = geth.eth_call(&factory, &ABI.get().unwrap(), "allPairsLength", &vec![])?;
+            let result = geth.eth_call(
+                &factory,
+                &ABI.get().unwrap(),
+                "allPairsLength",
+                &vec![],
+                None,
+            )?;
             let Token::Uint(count) = result[0] else { println!("{:?}", result[0]); unreachable!() };
             return Ok(count);
         }
@@ -105,6 +112,7 @@ pub mod v2 {
                 &ABI.get().unwrap(),
                 "allPairs",
                 &vec![Token::Uint(pool_id.into())],
+                None,
             )?;
             let Token::Address(addr) = result[0] else { unreachable!() };
             return Ok(addr);
