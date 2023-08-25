@@ -40,13 +40,18 @@ impl Client {
             None => "latest".to_string(),
         };
         let params = (tx, block);
-        println!("geth {} {} {:?}", self.url, function_name, function_params);
         let output = self.rpc_str("eth_call", ParamTypes::Infura(params))?;
         let output_no_0x = output.strip_prefix("0x").unwrap();
         let output_bytes = hex::decode(output_no_0x).unwrap();
         match function_call.decode_output(&output_bytes) {
             Err(_) => Err(output_no_0x.into()),
-            Ok(tokens) => Ok(tokens),
+            Ok(tokens) => {
+                println!(
+                    "geth {}({:?}) => {:?}",
+                    function_name, function_params, tokens
+                );
+                Ok(tokens)
+            }
         }
     }
 
@@ -87,7 +92,6 @@ impl Client {
             method: method.to_string(),
             params: params,
         };
-        log::info!("{}", serde_json::to_string(&jrpc).unwrap());
         let result = ureq::post(&self.url).send_json(&jrpc);
         match result {
             Ok(res) => {
