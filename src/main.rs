@@ -1,6 +1,7 @@
 use crate::coin::Coin;
 use crate::erc20::Erc20;
 use crate::sql::Ops;
+use ethereum_types::Address;
 
 mod coin;
 mod config;
@@ -54,30 +55,8 @@ fn main() {
             token0: tokens.0,
             token1: tokens.1,
         };
-        let token0 = Erc20 { address: tokens.0 };
-        let token0_name = token0.name(&geth).unwrap();
-        let token0_symbol = token0.symbol(&geth).unwrap();
-        let token0_decimals = token0.decimals(&geth).unwrap();
-        let coin0 = Coin {
-            contract_address: token0.address,
-            name: token0_name,
-            symbol: token0_symbol,
-            decimals: token0_decimals,
-        };
-        log::info!("coin0{:?}", coin0);
-        sql.insert(coin0.to_upsert_sql());
-
-        let token1 = Erc20 { address: tokens.1 };
-        let token1_name = token1.name(&geth).unwrap();
-        let token1_symbol = token1.symbol(&geth).unwrap();
-        let token1_decimals = token1.decimals(&geth).unwrap();
-        let coin1 = Coin {
-            contract_address: token1.address,
-            name: token1_name,
-            symbol: token1_symbol,
-            decimals: token1_decimals,
-        };
-        sql.insert(coin1.to_upsert_sql());
+        refresh_token(&geth, &mut sql, tokens.0);
+        refresh_token(&geth, &mut sql, tokens.1);
 
         let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address, eth_block).unwrap();
         let pool_reserves = uniswap::v2::Reserves {
@@ -90,4 +69,20 @@ fn main() {
         sql.insert(pool.to_upsert_sql());
         sql.insert(pool_reserves.to_upsert_sql());
     }
+}
+
+fn refresh_token(geth: &crate::geth::Client, sql: &mut crate::sql::Client, token: Address) -> Coin {
+    let token = Erc20 { address: token };
+    let token_name = token.name(&geth).unwrap();
+    let token_symbol = token.symbol(&geth).unwrap();
+    let token_decimals = token.decimals(&geth).unwrap();
+    let coin = Coin {
+        contract_address: token.address,
+        name: token_name,
+        symbol: token_symbol,
+        decimals: token_decimals,
+    };
+    log::info!("coin {:?}", coin);
+    sql.insert(coin.to_upsert_sql());
+    coin
 }
