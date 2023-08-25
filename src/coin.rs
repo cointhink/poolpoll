@@ -24,3 +24,19 @@ impl crate::sql::Ops for Coin {
         )
     }
 }
+
+impl From<&postgres::Row> for Coin {
+    fn from(row: &postgres::Row) -> Self {
+        let contract_address =
+            Address::from_slice(&hex::decode::<String>(row.get("contract_address")).unwrap());
+        let name = row.get::<&str, String>("name");
+        let symbol = row.get::<&str, String>("symbol");
+        let decimals = Into::<U256>::into(row.get::<&str, i32>("decimals"));
+        Coin {
+            contract_address,
+            name,
+            symbol,
+            decimals,
+        }
+    }
+}

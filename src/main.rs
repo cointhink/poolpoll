@@ -72,17 +72,28 @@ fn main() {
 }
 
 fn refresh_token(geth: &crate::geth::Client, sql: &mut crate::sql::Client, token: Address) -> Coin {
-    let token = Erc20 { address: token };
-    let token_name = token.name(&geth).unwrap();
-    let token_symbol = token.symbol(&geth).unwrap();
-    let token_decimals = token.decimals(&geth).unwrap();
-    let coin = Coin {
-        contract_address: token.address,
-        name: token_name,
-        symbol: token_symbol,
-        decimals: token_decimals,
+    let exist = sql_query_builder::Select::new()
+        .select("*")
+        .from("coins")
+        .where_clause("contract_address = $1");
+    let rows = sql.q((exist.to_string(), vec![Box::new(format!("{:x}", token))]));
+    let coin = if rows.len() == 0 {
+        let token = Erc20 { address: token };
+        let token_name = token.name(&geth).unwrap();
+        let token_symbol = token.symbol(&geth).unwrap();
+        let token_decimals = token.decimals(&geth).unwrap();
+        let coin = Coin {
+            contract_address: token.address,
+            name: token_name,
+            symbol: token_symbol,
+            decimals: token_decimals,
+        };
+        sql.insert(coin.to_upsert_sql());
+        coin
+    } else {
+        log::info!("hydrated from {} rows", rows.len());
+        Coin::from(&rows[0])
     };
     log::info!("coin {:?}", coin);
-    sql.insert(coin.to_upsert_sql());
     coin
 }
