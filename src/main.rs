@@ -91,21 +91,3 @@ fn main() {
         sql.insert(pool_reserves.to_upsert_sql());
     }
 }
-
-// use ethereum_tx_sign::Transaction;
-// fn sign() {
-//     let tx = ethereum_tx_sign::LegacyTransaction {
-//         chain: 1,
-//         nonce: 0,
-//         to: None,
-//         value: 0,
-//         gas_price: 0,
-//         gas: 0,
-//         data: vec![],
-//     };
-
-//     let private_key = hex::decode(&config::CONFIG.get().unwrap().private_key).unwrap();
-//     let ecdsa = tx.ecdsa(&private_key).unwrap();
-//     let _ = tx.sign(&ecdsa);
-//     log::info!("signed.")
-// }

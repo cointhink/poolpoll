@@ -5,7 +5,6 @@ use ethereum_types::Address;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::error;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -75,13 +74,6 @@ impl Client {
     pub fn last_block(&self) -> u32 {
         let blk_num_str = self.rpc_str("eth_blockNumber", ParamTypes::Empty).unwrap();
         u32::from_str_radix(&blk_num_str[2..], 16).unwrap()
-    }
-
-    pub fn nonce(&self, addr: &str) -> Result<u32, Box<dyn error::Error>> {
-        let params = (addr.to_string(), "latest".to_string());
-        let tx_count_str =
-            self.rpc_str("eth_getTransactionCount", ParamTypes::InfuraSingle(params))?;
-        Ok(u32::from_str_radix(&tx_count_str[2..], 16).unwrap())
     }
 
     pub fn rpc(
