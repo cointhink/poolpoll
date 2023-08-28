@@ -89,6 +89,12 @@ pub mod v2 {
     pub(crate) struct Factory {}
 
     impl Factory {
+        pub(crate) fn setup() {
+            let abi_file = std::fs::File::open("abi/uniswap_v2_factory.json").unwrap();
+            let abi_factory = ethabi::Contract::load(abi_file).unwrap();
+            ABI.set(abi_factory).unwrap();
+        }
+
         pub(crate) fn pool_count(geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
             let factory = Address::from_slice(&hex::decode(UNISWAP_FACTORY).unwrap());
             let result = geth.eth_call(
@@ -100,6 +106,17 @@ pub mod v2 {
             )?;
             let Token::Uint(count) = result[0] else { println!("{:?}", result[0]); unreachable!() };
             return Ok(count);
+        }
+
+        pub(crate) fn sql_pool_count(sql: &mut crate::sql::Client) -> u64 {
+            let max_pool = sql_query_builder::Select::new()
+                .select("max(uniswap_v2_index)")
+                .from("pools");
+            let sql_pool_count_rows = sql.q((max_pool.to_string(), vec![]));
+            match sql_pool_count_rows[0].try_get::<&str, i32>("max") {
+                Ok(count) => count as u64,
+                Err(_) => 0,
+            }
         }
 
         pub(crate) fn pool_addr(

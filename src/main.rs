@@ -5,6 +5,7 @@ use ethereum_types::Address;
 
 mod coin;
 mod config;
+mod curve;
 mod erc20;
 mod geth;
 mod log;
@@ -27,18 +28,9 @@ fn main() {
         .set(ethabi::Contract::load(abi_file).unwrap())
         .unwrap();
 
-    let abi_file = std::fs::File::open("abi/uniswap_v2_factory.json").unwrap();
-    let abi_factory = ethabi::Contract::load(abi_file).unwrap();
-    uniswap::v2::ABI.set(abi_factory).unwrap();
+    uniswap::v2::Factory::setup();
     let pool_count = uniswap::v2::Factory::pool_count(&geth);
-    let max_pool = sql_query_builder::Select::new()
-        .select("max(uniswap_v2_index)")
-        .from("pools");
-    let sql_pool_count_rows = sql.q((max_pool.to_string(), vec![]));
-    let sql_pool_count = match sql_pool_count_rows[0].try_get::<&str, i32>("max") {
-        Ok(count) => count as u64,
-        Err(_) => 0,
-    };
+    let sql_pool_count = uniswap::v2::Factory::sql_pool_count(&mut sql);
     log::info!(
         "Uniswap v2 contract count {:?} (db highest {:?})",
         pool_count,
