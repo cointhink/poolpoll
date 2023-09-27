@@ -3,10 +3,11 @@ pub mod v3 {
 }
 
 pub mod v2 {
-    use crate::geth::Client;
+    use crate::{geth::Client, sql::SqlQuery};
     use ethabi::token::Token;
     use ethabi::Contract;
     use ethereum_types::{Address, U256};
+    use sql_query_builder as sql;
     use std::sync::OnceLock;
 
     const UNISWAP_FACTORY: &str = "5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
@@ -35,9 +36,15 @@ pub mod v2 {
             address: &Address,
         ) -> Result<(Address, Address), Box<dyn std::error::Error>> {
             let result_t0 = geth.eth_call(address, abi, "token0", &vec![], None)?;
-            let Token::Address(addr_t0) = result_t0[0] else { println!("{:?}", result_t0[0]); unreachable!() };
+            let Token::Address(addr_t0) = result_t0[0] else {
+                println!("{:?}", result_t0[0]);
+                unreachable!()
+            };
             let result_t1 = geth.eth_call(address, abi, "token1", &vec![], None)?;
-            let Token::Address(addr_t1) = result_t1[0] else { println!("{:?}", result_t1[0]); unreachable!() };
+            let Token::Address(addr_t1) = result_t1[0] else {
+                println!("{:?}", result_t1[0]);
+                unreachable!()
+            };
             Ok((addr_t0, addr_t1))
         }
 
@@ -48,9 +55,22 @@ pub mod v2 {
             eth_block: u32,
         ) -> Result<(U256, U256), Box<dyn std::error::Error>> {
             let result = geth.eth_call(address, abi, "getReserves", &vec![], Some(eth_block))?;
-            let Token::Uint(r0) = result[0] else { println!("{:?}", result[0]); unreachable!() };
-            let Token::Uint(r1) = result[1] else { unreachable!() };
+            let Token::Uint(r0) = result[0] else {
+                println!("{:?}", result[0]);
+                unreachable!()
+            };
+            let Token::Uint(r1) = result[1] else {
+                unreachable!()
+            };
             Ok((r0, r1))
+        }
+
+        pub fn find_sql(uniswap_v2_index: i32) -> SqlQuery {
+            let select = sql::Select::new()
+                .select("*")
+                .from("pools")
+                .where_clause("uniswap_v2_index = $1");
+            (select.to_string(), vec![Box::new(uniswap_v2_index)])
         }
     }
 
@@ -67,6 +87,19 @@ pub mod v2 {
                     Box::new(format!("{}", self.y)),
                 ],
             )
+        }
+    }
+
+    impl From<&postgres::Row> for Pool {
+        fn from(row: &postgres::Row) -> Self {
+            Pool {
+                uniswap_v2_index: row.get("uniswap_v2_index"),
+                contract_address: Address::from_slice(
+                    &hex::decode(row.get::<_, String>("contract_address")).unwrap(),
+                ),
+                token0: Address::from_slice(&hex::decode(row.get::<_, String>("token0")).unwrap()),
+                token1: Address::from_slice(&hex::decode(row.get::<_, String>("token1")).unwrap()),
+            }
         }
     }
 
@@ -104,7 +137,10 @@ pub mod v2 {
                 &vec![],
                 None,
             )?;
-            let Token::Uint(count) = result[0] else { println!("{:?}", result[0]); unreachable!() };
+            let Token::Uint(count) = result[0] else {
+                println!("{:?}", result[0]);
+                unreachable!()
+            };
             return Ok(count);
         }
 
@@ -131,7 +167,9 @@ pub mod v2 {
                 &vec![Token::Uint(pool_id.into())],
                 None,
             )?;
-            let Token::Address(addr) = result[0] else { unreachable!() };
+            let Token::Address(addr) = result[0] else {
+                unreachable!()
+            };
             return Ok(addr);
         }
     }

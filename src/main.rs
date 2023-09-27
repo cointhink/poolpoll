@@ -25,14 +25,23 @@ fn main() {
     log::info!("eth block {}", eth_block);
     if std::env::args().find(|arg| arg == "discover").is_some() {
         discover(&geth, &mut sql, eth_block);
-    } else if std::env::args().find(|arg| arg == "discover").is_some() {
+    } else if std::env::args().find(|arg| arg == "refresh").is_some() {
         refresh(&geth, &mut sql, eth_block);
     } else {
         log::info!("commands: discover, refresh")
     }
 }
 
-fn refresh(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {}
+fn refresh(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
+    let sql_pool_count = uniswap::v2::Factory::sql_pool_count(sql);
+    for pool_idx in 0..sql_pool_count {
+        log::info!("{:?}", uniswap::v2::Pool::find_sql(pool_idx as i32));
+        let rows = sql.q(uniswap::v2::Pool::find_sql(pool_idx as i32));
+        let pool = uniswap::v2::Pool::from(&rows[0]);
+        log::info!("refresh: {:?}", pool);
+    }
+}
+
 fn discover(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
     let abi_file = std::fs::File::open("abi/ERC20.json").unwrap();
     erc20::ABI
