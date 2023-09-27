@@ -23,6 +23,17 @@ fn main() {
     let geth = geth::Client::build(&config.geth_url, &config.infura_key);
     let eth_block = geth.last_block();
     log::info!("eth block {}", eth_block);
+    if std::env::args().find(|arg| arg == "discover").is_some() {
+        discover(&geth, &mut sql, eth_block);
+    } else if std::env::args().find(|arg| arg == "discover").is_some() {
+        refresh(&geth, &mut sql, eth_block);
+    } else {
+        log::info!("commands: discover, refresh")
+    }
+}
+
+fn refresh(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {}
+fn discover(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
     let abi_file = std::fs::File::open("abi/ERC20.json").unwrap();
     erc20::ABI
         .set(ethabi::Contract::load(abi_file).unwrap())
@@ -30,7 +41,7 @@ fn main() {
 
     uniswap::v2::Factory::setup();
     let pool_count = uniswap::v2::Factory::pool_count(&geth);
-    let sql_pool_count = uniswap::v2::Factory::sql_pool_count(&mut sql);
+    let sql_pool_count = uniswap::v2::Factory::sql_pool_count(sql);
     log::info!(
         "Uniswap v2 contract count {:?} (db highest {:?})",
         pool_count,
@@ -47,8 +58,8 @@ fn main() {
             token0: tokens.0,
             token1: tokens.1,
         };
-        refresh_token(&geth, &mut sql, tokens.0);
-        refresh_token(&geth, &mut sql, tokens.1);
+        refresh_token(&geth, sql, tokens.0);
+        refresh_token(&geth, sql, tokens.1);
 
         let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address, eth_block).unwrap();
         let pool_reserves = uniswap::v2::Reserves {
