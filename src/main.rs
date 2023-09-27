@@ -21,6 +21,11 @@ fn main() {
     let mut sql = sql::new();
 
     let geth = geth::Client::build(&config.geth_url, &config.infura_key);
+    let abi_file = std::fs::File::open("abi/ERC20.json").unwrap();
+    erc20::ABI
+        .set(ethabi::Contract::load(abi_file).unwrap())
+        .unwrap();
+
     let eth_block = geth.last_block();
     log::info!("eth block {}", eth_block);
     if std::env::args().find(|arg| arg == "discover").is_some() {
@@ -39,15 +44,11 @@ fn refresh(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
         let rows = sql.q(uniswap::v2::Pool::find_sql(pool_idx as i32));
         let pool = uniswap::v2::Pool::from(&rows[0]);
         log::info!("refresh: {:?}", pool);
+        update_pool_reserves(geth, sql, &pool, eth_block);
     }
 }
 
 fn discover(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
-    let abi_file = std::fs::File::open("abi/ERC20.json").unwrap();
-    erc20::ABI
-        .set(ethabi::Contract::load(abi_file).unwrap())
-        .unwrap();
-
     uniswap::v2::Factory::setup();
     let pool_count = uniswap::v2::Factory::pool_count(&geth);
     let sql_pool_count = uniswap::v2::Factory::sql_pool_count(sql);
@@ -71,16 +72,25 @@ fn discover(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
         refresh_token(&geth, sql, tokens.1);
 
         let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address, eth_block).unwrap();
-        let pool_reserves = uniswap::v2::Reserves {
-            pool: &pool,
-            block_number: eth_block as u128,
-            x: reserves.0,
-            y: reserves.1,
-        };
+        let pool_reserves = uniswap::v2::Reserves::new(&pool, eth_block, reserves);
         log::info!("Uniswap v2 pool info #0 {:?} {:?}", pool, reserves);
         sql.insert(pool.to_upsert_sql());
         sql.insert(pool_reserves.to_upsert_sql());
     }
+}
+
+fn update_pool_reserves(
+    geth: &geth::Client,
+    sql: &mut crate::sql::Client,
+    pool: &uniswap::v2::Pool,
+    eth_block: u32,
+) {
+    let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
+    let abi_pool = ethabi::Contract::load(abi_file).unwrap();
+    let reserves =
+        uniswap::v2::Pool::reserves(&geth, &abi_pool, &pool.contract_address, eth_block).unwrap();
+    let pool_reserves = uniswap::v2::Reserves::new(&pool, eth_block, reserves);
+    sql.insert(pool_reserves.to_upsert_sql());
 }
 
 fn refresh_token(geth: &crate::geth::Client, sql: &mut crate::sql::Client, token: Address) -> Coin {

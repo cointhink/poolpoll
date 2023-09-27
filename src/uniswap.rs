@@ -74,6 +74,16 @@ pub mod v2 {
         }
     }
 
+    impl<'a> Reserves<'a> {
+        pub fn new(pool: &'a Pool, eth_block: u32, reserves: (U256, U256)) -> Self {
+            Reserves {
+                pool,
+                block_number: eth_block as u128,
+                x: reserves.0,
+                y: reserves.1,
+            }
+        }
+    }
     impl crate::sql::Ops for Reserves<'_> {
         fn to_upsert_sql(&self) -> crate::sql::SqlQuery {
             <dyn crate::Ops>::upsert_sql(
