@@ -41,7 +41,10 @@ impl Erc20 {
             &vec![],
             None,
         )?;
-        let Token::Uint(decimals) = result[0] else { println!("{:?}", result[0]); unreachable!() };
+        let Token::Uint(decimals) = result[0] else {
+            println!("{:?}", result[0]);
+            unreachable!()
+        };
         Ok(decimals)
     }
 }

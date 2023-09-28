@@ -76,9 +76,17 @@ impl Client {
         }
     }
 
-    pub fn last_block(&self) -> u32 {
+    pub fn last_block_number(&self) -> u32 {
         let blk_num_str = self.rpc_str("eth_blockNumber", ParamTypes::Empty).unwrap();
         u32::from_str_radix(&blk_num_str[2..], 16).unwrap()
+    }
+
+    pub fn transactions_for_block(&self, block_number: u32) {
+        let block_json = self.rpc_str(
+            "eth_getBlockByNumber",
+            ParamTypes::InfuraSingle((block_number.to_string(), block_number.to_string())),
+        ).unwrap();
+        log::info!("transactions_for_block {}", block_json);
     }
 
     pub fn rpc(

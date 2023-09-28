@@ -26,15 +26,20 @@ fn main() {
         .set(ethabi::Contract::load(abi_file).unwrap())
         .unwrap();
 
-    let eth_block = geth.last_block();
+    let eth_block = geth.last_block_number();
     log::info!("eth block {}", eth_block);
     if std::env::args().find(|arg| arg == "discover").is_some() {
         discover(&geth, &mut sql, eth_block);
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
         refresh(&geth, &mut sql, eth_block);
+    } else if std::env::args().find(|arg| arg == "tail").is_some() {
+        tail(&geth, &mut sql, eth_block);
     } else {
         log::info!("commands: discover, refresh")
     }
+}
+fn tail(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
+    geth.transactions_for_block(eth_block);
 }
 
 fn refresh(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
