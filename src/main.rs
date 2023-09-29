@@ -35,9 +35,8 @@ fn main() {
     } else if std::env::args().find(|arg| arg == "tail").is_some() {
         let mut block_number = last_block_number;
         loop {
-            log::info!("tailing block number {}", block_number);
             tail(&geth, &mut sql, block_number);
-            block_number = block_number - 1;
+            block_number = block_number + 1;
         }
     } else {
         log::info!("commands: discover, refresh, tail")
@@ -51,6 +50,8 @@ fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
         block_number,
         block.transactions.len()
     );
+    let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
+    let abi_pool = ethabi::Contract::load(abi_file).unwrap();
     for transaction in block.transactions {
         match transaction.to {
             Some(to) => {
@@ -59,7 +60,19 @@ fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
                     to_nox.to_owned(),
                 ));
                 if rows.len() == 1 {
-                    log::info!("tx found for pool {} input {}", to_nox, transaction.input);
+                    let swap = abi_pool.function("swap").unwrap();
+                    let swap_sig = hex::encode(swap.short_signature());
+                    if transaction.input[2..10] == swap_sig {
+                        let input_params = &transaction.input[10..];
+                        let input_bytes = hex::decode(input_params).unwrap();
+                        let input_tokens = swap.decode_input(&input_bytes).unwrap();
+                        log::info!(
+                            "swap pool {} token0 {:?} token1 {:?}",
+                            to_nox,
+                            input_tokens[0],
+                            input_tokens[1]
+                        );
+                    }
                 }
             }
             None => (),
