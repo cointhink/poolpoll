@@ -62,7 +62,6 @@ impl Client {
             Ok(rpc_result) => match rpc_result.part {
                 RpcResultTypes::Error(e) => Err(Box::try_from(e.error.message).unwrap()),
                 RpcResultTypes::Result(r) => {
-                    log::info!("rpcstr {:?}", r);
                     let str_ret = match r.result {
                         ResultTypes::String(s) => s,
                         _ => "-bad non-string response".to_string(),
@@ -79,14 +78,22 @@ impl Client {
         u32::from_str_radix(&blk_num_str[2..], 16).unwrap()
     }
 
-    pub fn transactions_for_block(&self, block_number: u32) {
+    pub fn block(&self, block_number: u32) -> InfuraBlock {
         let infura_block_number = infura_block_param(Some(block_number));
         let params = (infura_block_number, true);
-        log::info!("tfb {:?}", params);
-        let block_json = self
-            .rpc_str("eth_getBlockByNumber", ParamTypes::EthBlockByHash(params))
-            .unwrap();
-        log::info!("transactions_for_block {} => {}", block_number, block_json);
+        match self
+            .rpc("eth_getBlockByNumber", ParamTypes::EthBlockByHash(params))
+            .unwrap()
+            .part
+        {
+            RpcResultTypes::Result(r) => match r.result {
+                ResultTypes::Block(b) => b,
+                ResultTypes::String(_) => todo!(),
+                ResultTypes::TransactionReceipt(_) => todo!(),
+                ResultTypes::Null => todo!(),
+            },
+            RpcResultTypes::Error(_) => todo!(),
+        }
     }
 
     pub fn rpc(
@@ -166,16 +173,31 @@ pub enum RpcResultTypes {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ResultRpc {
+    pub result: ResultTypes,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum ResultTypes {
     String(String),
     TransactionReceipt(TransactionReceipt),
+    Block(InfuraBlock),
     Null,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct ResultRpc {
-    pub result: ResultTypes,
+pub struct InfuraBlock {
+    pub difficulty: String,
+    pub hash: String,
+    pub number: String,
+    pub transactions: Vec<InfuraTransaction>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InfuraTransaction {
+    pub from: String,
+    pub to: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
