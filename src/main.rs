@@ -33,12 +33,12 @@ fn main() {
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
         refresh(&geth, &mut sql, eth_block);
     } else if std::env::args().find(|arg| arg == "tail").is_some() {
-        tail(&geth, &mut sql, eth_block);
+        tail(&geth, eth_block);
     } else {
-        log::info!("commands: discover, refresh")
+        log::info!("commands: discover, refresh, tail")
     }
 }
-fn tail(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
+fn tail(geth: &geth::Client, eth_block: u32) {
     geth.transactions_for_block(eth_block);
 }
 

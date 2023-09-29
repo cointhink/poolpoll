@@ -29,17 +29,13 @@ impl Client {
         abi: &Contract,
         function_name: &str,
         function_params: &[Token],
-        eth_block: Option<u32>,
+        block_number: Option<u32>,
     ) -> Result<Vec<Token>, Box<dyn std::error::Error>> {
         let function_call = abi.function(function_name).unwrap();
         let function_input = function_call.encode_input(function_params).unwrap();
         let to_hex = format!("0x{}", hex::encode(to));
         let tx = tx_build(to_hex, function_input);
-        let block = match eth_block {
-            Some(num) => format!("0x{:x}", num),
-            None => "latest".to_string(),
-        };
-        let params = (tx, block);
+        let params = (tx, infura_block_param(block_number));
         let output = self.rpc_str("eth_call", ParamTypes::Infura(params))?;
         let output_no_0x = output.strip_prefix("0x").unwrap();
         let output_bytes = hex::decode(output_no_0x).unwrap();
@@ -60,14 +56,16 @@ impl Client {
         method: &str,
         params: ParamTypes,
     ) -> Result<String, Box<dyn std::error::Error>> {
+        log::info!("rpcstr {} {:?}", method, params);
         let result = self.rpc(method, params);
         match result {
             Ok(rpc_result) => match rpc_result.part {
                 RpcResultTypes::Error(e) => Err(Box::try_from(e.error.message).unwrap()),
                 RpcResultTypes::Result(r) => {
+                    log::info!("rpcstr {:?}", r);
                     let str_ret = match r.result {
                         ResultTypes::String(s) => s,
-                        _ => "-bad response".to_string(),
+                        _ => "-bad non-string response".to_string(),
                     };
                     Ok(str_ret)
                 }
@@ -82,11 +80,13 @@ impl Client {
     }
 
     pub fn transactions_for_block(&self, block_number: u32) {
-        let block_json = self.rpc_str(
-            "eth_getBlockByNumber",
-            ParamTypes::InfuraSingle((block_number.to_string(), block_number.to_string())),
-        ).unwrap();
-        log::info!("transactions_for_block {}", block_json);
+        let infura_block_number = infura_block_param(Some(block_number));
+        let params = (infura_block_number, true);
+        log::info!("tfb {:?}", params);
+        let block_json = self
+            .rpc_str("eth_getBlockByNumber", ParamTypes::EthBlockByHash(params))
+            .unwrap();
+        log::info!("transactions_for_block {} => {}", block_number, block_json);
     }
 
     pub fn rpc(
@@ -108,6 +108,13 @@ impl Client {
             }
             Err(e) => Err(Box::new(e)),
         }
+    }
+}
+
+fn infura_block_param(block_number: Option<u32>) -> String {
+    match block_number {
+        Some(number) => format!("0x{:x}", number),
+        None => "latest".to_string(),
     }
 }
 
@@ -135,6 +142,7 @@ pub enum ParamTypes {
     Single(SingleParam),
     Infura(JsonInfuraRpcParam),
     InfuraSingle(InfuraSingleParam),
+    EthBlockByHash((String, bool)),
 }
 
 pub type JsonRpcParam = HashMap<String, String>;
