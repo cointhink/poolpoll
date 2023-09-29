@@ -26,14 +26,19 @@ fn main() {
         .set(ethabi::Contract::load(abi_file).unwrap())
         .unwrap();
 
-    let block_number = geth.last_block_number();
-    log::info!("eth last block number {}", block_number);
+    let last_block_number = geth.last_block_number();
+    log::info!("eth last block number {}", last_block_number);
     if std::env::args().find(|arg| arg == "discover").is_some() {
-        discover(&geth, &mut sql, block_number);
+        discover(&geth, &mut sql, last_block_number);
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
-        refresh(&geth, &mut sql, block_number);
+        refresh(&geth, &mut sql, last_block_number);
     } else if std::env::args().find(|arg| arg == "tail").is_some() {
-        tail(&geth, &mut sql, block_number);
+        let mut block_number = last_block_number;
+        loop {
+            log::info!("tailing block number {}", block_number);
+            tail(&geth, &mut sql, block_number);
+            block_number = block_number - 1;
+        }
     } else {
         log::info!("commands: discover, refresh, tail")
     }
@@ -47,11 +52,14 @@ fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
         block.transactions.len()
     );
     for transaction in block.transactions {
-        let rows = sql.q(uniswap::v2::Pool::find_by_contract_address(
-            transaction.to.clone(),
-        ));
-        if rows.len() == 1 {
-            log::info!("block tx found for pool {}", transaction.to);
+        match transaction.to {
+            Some(to) => {
+                let rows = sql.q(uniswap::v2::Pool::find_by_contract_address(to.clone()));
+                if rows.len() == 1 {
+                    log::info!("block tx found for pool {}", to);
+                }
+            }
+            None => (),
         }
     }
 }
