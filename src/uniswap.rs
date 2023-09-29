@@ -65,12 +65,20 @@ pub mod v2 {
             Ok((r0, r1))
         }
 
-        pub fn find_sql(uniswap_v2_index: i32) -> SqlQuery {
+        pub fn find_by_uniswap_v2_index(uniswap_v2_index: i32) -> SqlQuery {
             let select = sql::Select::new()
                 .select("*")
                 .from("pools")
                 .where_clause("uniswap_v2_index = $1");
             (select.to_string(), vec![Box::new(uniswap_v2_index)])
+        }
+
+        pub fn find_by_contract_address(contract_address: String) -> SqlQuery {
+            let select = sql::Select::new()
+                .select("*")
+                .from("pools")
+                .where_clause("contract_address = $1");
+            (select.to_string(), vec![Box::new(contract_address)])
         }
     }
 

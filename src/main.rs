@@ -33,21 +33,37 @@ fn main() {
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
         refresh(&geth, &mut sql, block_number);
     } else if std::env::args().find(|arg| arg == "tail").is_some() {
-        tail(&geth, block_number);
+        tail(&geth, &mut sql, block_number);
     } else {
         log::info!("commands: discover, refresh, tail")
     }
 }
-fn tail(geth: &geth::Client, block_number: u32) {
+
+fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
     let block = geth.block(block_number);
-    log::info!("tail block {} {:?}", block_number, block);
+    log::info!(
+        "tail block {} {} transactions",
+        block_number,
+        block.transactions.len()
+    );
+    for transaction in block.transactions {
+        let rows = sql.q(uniswap::v2::Pool::find_by_contract_address(
+            transaction.to.clone(),
+        ));
+        if rows.len() == 1 {
+            log::info!("block tx found for pool {}", transaction.to);
+        }
+    }
 }
 
 fn refresh(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
     let sql_pool_count = uniswap::v2::Factory::sql_pool_count(sql);
     for pool_idx in 0..sql_pool_count {
-        log::info!("{:?}", uniswap::v2::Pool::find_sql(pool_idx as i32));
-        let rows = sql.q(uniswap::v2::Pool::find_sql(pool_idx as i32));
+        log::info!(
+            "{:?}",
+            uniswap::v2::Pool::find_by_uniswap_v2_index(pool_idx as i32)
+        );
+        let rows = sql.q(uniswap::v2::Pool::find_by_uniswap_v2_index(pool_idx as i32));
         let pool = uniswap::v2::Pool::from(&rows[0]);
         log::info!("refresh: {:?}", pool);
         update_pool_reserves(geth, sql, &pool, eth_block);
