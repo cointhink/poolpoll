@@ -197,6 +197,7 @@ pub struct InfuraBlock {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InfuraTransaction {
     pub from: String,
+    pub input: String,
     pub to: Option<String>,
 }
 

@@ -26,7 +26,7 @@ fn main() {
         .set(ethabi::Contract::load(abi_file).unwrap())
         .unwrap();
 
-    let last_block_number = geth.last_block_number();
+    let last_block_number = 18224212; //geth.last_block_number();
     log::info!("eth last block number {}", last_block_number);
     if std::env::args().find(|arg| arg == "discover").is_some() {
         discover(&geth, &mut sql, last_block_number);
@@ -54,9 +54,12 @@ fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
     for transaction in block.transactions {
         match transaction.to {
             Some(to) => {
-                let rows = sql.q(uniswap::v2::Pool::find_by_contract_address(to.clone()));
+                let to_nox = to.strip_prefix("0x").unwrap();
+                let rows = sql.q(uniswap::v2::Pool::find_by_contract_address(
+                    to_nox.to_owned(),
+                ));
                 if rows.len() == 1 {
-                    log::info!("block tx found for pool {}", to);
+                    log::info!("tx found for pool {} input {}", to_nox, transaction.input);
                 }
             }
             None => (),
