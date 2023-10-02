@@ -1,5 +1,6 @@
 use crate::coin::Coin;
 use crate::erc20::Erc20;
+use crate::etherscan::Etherscan;
 use crate::sql::Ops;
 use ethereum_types::Address;
 
@@ -7,6 +8,7 @@ mod coin;
 mod config;
 mod curve;
 mod erc20;
+mod etherscan;
 mod geth;
 mod log;
 mod sql;
@@ -44,6 +46,8 @@ fn main() {
 }
 
 fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
+    let config = config::CONFIG.get().unwrap();
+    let etherscan = Etherscan::new(config.etherscan_key.clone());
     let block = geth.block(block_number);
     log::info!(
         "tail block {} {} transactions",
@@ -66,12 +70,19 @@ fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
                         let input_params = &transaction.input[10..];
                         let input_bytes = hex::decode(input_params).unwrap();
                         let input_tokens = swap.decode_input(&input_bytes).unwrap();
+                        let callback = input_tokens[3].clone().into_bytes().unwrap();
                         log::info!(
-                            "swap pool {} token0 {:?} token1 {:?}",
+                            "swap pool {} token0 {:?} token1 {:?} to {:?} callback {:?}",
                             to_nox,
                             input_tokens[0],
-                            input_tokens[1]
+                            input_tokens[1],
+                            input_tokens[2],
+                            hex::encode(&callback)
                         );
+                        //let callback_tokens = swap.decode_input(&callback).unwrap();
+                        //log::info!("swap pool callback {:?}", callback_tokens);
+                        let internal_txs = etherscan.tx_list_internal(transaction.hash);
+                        log::info!("swap pool internal txs {}", internal_txs.to_string());
                     }
                 }
             }

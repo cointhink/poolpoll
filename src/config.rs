@@ -9,6 +9,7 @@ pub struct Config {
     pub geth_url: String,
     pub infura_key: String,
     pub psql: String,
+    pub etherscan_key: String,
 }
 
 pub fn load(filename: &str) -> Config {
