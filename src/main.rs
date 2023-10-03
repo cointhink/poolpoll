@@ -108,7 +108,14 @@ fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
             //         );
             //     }
             // }
-            geth.logs(block_number);
+            let logs = geth.logs(block_number);
+            for log in logs {
+                if log.topics[0]
+                    == "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+                {
+                    log::info!("swap {:?}", log)
+                }
+            }
         }
     }
 }
