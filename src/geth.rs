@@ -86,13 +86,39 @@ impl Client {
             .unwrap()
             .part
         {
-            RpcResultTypes::Result(r) => match r.result {
-                ResultTypes::Block(b) => b,
-                ResultTypes::String(_) => todo!(),
-                ResultTypes::TransactionReceipt(_) => todo!(),
-                ResultTypes::Null => todo!(),
-            },
+            RpcResultTypes::Result(r) => {
+                if let ResultTypes::Block(b) = r.result {
+                    b
+                } else {
+                    todo!()
+                }
+            }
             RpcResultTypes::Error(_) => todo!(),
+        }
+    }
+
+    pub fn logs(&self, block_number: u32) -> Vec<InfuraLog> {
+        let infura_block_number = infura_block_param(Some(block_number));
+        let mut rpc_param = JsonRpcParam::new();
+        rpc_param.insert("fromBlock".to_owned(), infura_block_number.clone());
+        rpc_param.insert("toBlock".to_owned(), infura_block_number.clone());
+        match self
+            .rpc("eth_getLogs", ParamTypes::Standard(vec![rpc_param]))
+            .unwrap()
+            .part
+        {
+            RpcResultTypes::Result(r) => {
+                if let ResultTypes::Logs(logs) = r.result {
+                    log::info!("got {} logs", logs.len());
+                    logs
+                } else {
+                    todo!()
+                }
+            }
+            RpcResultTypes::Error(e) => {
+                log::info!("{:?}", e);
+                todo!()
+            }
         }
     }
 
@@ -107,6 +133,7 @@ impl Client {
             method: method.to_string(),
             params: params,
         };
+        log::info!("{:#?}", jrpc);
         let result = ureq::post(&self.url).send_json(&jrpc);
         match result {
             Ok(res) => {
@@ -145,7 +172,7 @@ pub struct JsonRpc {
 #[serde(untagged)]
 pub enum ParamTypes {
     Empty,
-    Standard(JsonRpcParam),
+    Standard(Vec<JsonRpcParam>),
     Single(SingleParam),
     Infura(JsonInfuraRpcParam),
     InfuraSingle(InfuraSingleParam),
@@ -183,8 +210,12 @@ pub enum ResultTypes {
     String(String),
     TransactionReceipt(TransactionReceipt),
     Block(InfuraBlock),
+    Logs(Vec<InfuraLog>),
     Null,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct InfuraLog {}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InfuraBlock {

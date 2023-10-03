@@ -91,23 +91,24 @@ fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
             //log::info!("swap pool callback {:?}", callback_tokens);
             // let internal_txs = etherscan.tx_list_internal(transaction.hash).unwrap();
             // log::info!("swap pool internal txs {:#?}", internal_txs);
-            let token_xfers = etherscan.tx_token_xfer(to, block_number).unwrap();
-            for xfer in token_xfers {
-                let index = i64::from_str_radix(
-                    &transaction.transaction_index.strip_prefix("0x").unwrap(),
-                    16,
-                )
-                .unwrap();
-                if index.to_string() == xfer.transaction_index {
-                    log::info!(
-                        "swap {} {} {} {}",
-                        xfer.from,
-                        xfer.to,
-                        xfer.value,
-                        xfer.token_name
-                    );
-                }
-            }
+            // let token_xfers = etherscan.tx_token_xfer(to, block_number).unwrap();
+            // for xfer in token_xfers {
+            //     let index = i64::from_str_radix(
+            //         &transaction.transaction_index.strip_prefix("0x").unwrap(),
+            //         16,
+            //     )
+            //     .unwrap();
+            //     if index.to_string() == xfer.transaction_index {
+            //         log::info!(
+            //             "swap {} {} {} {}",
+            //             xfer.from,
+            //             xfer.to,
+            //             xfer.value,
+            //             xfer.token_name
+            //         );
+            //     }
+            // }
+            geth.logs(block_number);
         }
     }
 }
