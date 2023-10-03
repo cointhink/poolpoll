@@ -73,13 +73,15 @@ fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
         let swap = abi_pool.function("swap").unwrap();
         let swap_sig = hex::encode(swap.short_signature());
         if transaction.input[2..10] == swap_sig {
+            log::info!("tx {}", transaction.hash);
             let input_params = &transaction.input[10..];
             let input_bytes = hex::decode(input_params).unwrap();
             let input_tokens = swap.decode_input(&input_bytes).unwrap();
             let callback = input_tokens[3].clone().into_bytes().unwrap();
+            let to = transaction.to.unwrap();
             log::info!(
                 "swap pool {} token0 {:?} token1 {:?} to {:?} callback {:?}",
-                transaction.to.unwrap(),
+                to,
                 input_tokens[0],
                 input_tokens[1],
                 input_tokens[2],
@@ -87,8 +89,25 @@ fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
             );
             //let callback_tokens = swap.decode_input(&callback).unwrap();
             //log::info!("swap pool callback {:?}", callback_tokens);
-            let internal_txs = etherscan.tx_list_internal(transaction.hash).unwrap();
-            log::info!("swap pool internal txs {:#?}", internal_txs);
+            // let internal_txs = etherscan.tx_list_internal(transaction.hash).unwrap();
+            // log::info!("swap pool internal txs {:#?}", internal_txs);
+            let token_xfers = etherscan.tx_token_xfer(to, block_number).unwrap();
+            for xfer in token_xfers {
+                let index = i64::from_str_radix(
+                    &transaction.transaction_index.strip_prefix("0x").unwrap(),
+                    16,
+                )
+                .unwrap();
+                if index.to_string() == xfer.transaction_index {
+                    log::info!(
+                        "swap {} {} {} {}",
+                        xfer.from,
+                        xfer.to,
+                        xfer.value,
+                        xfer.token_name
+                    );
+                }
+            }
         }
     }
 }

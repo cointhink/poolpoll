@@ -195,7 +195,9 @@ pub struct InfuraBlock {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct InfuraTransaction {
+    pub transaction_index: String,
     pub hash: String,
     pub from: String,
     pub input: String,
