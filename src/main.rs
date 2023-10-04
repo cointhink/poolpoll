@@ -1,19 +1,19 @@
 use crate::coin::Coin;
 use crate::erc20::Erc20;
-use crate::etherscan::Etherscan;
 use crate::sql::Ops;
 use ethereum_types::Address;
-use std::ops::Not;
+use serde::Deserialize;
 
 mod coin;
 mod config;
 mod curve;
 mod erc20;
-mod etherscan;
 mod geth;
 mod log;
 mod sql;
 mod uniswap;
+
+const SWAP_TOPIC: &str = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
 fn main() {
     log::init();
@@ -47,75 +47,16 @@ fn main() {
 }
 
 fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
-    let config = config::CONFIG.get().unwrap();
-    let etherscan = Etherscan::new(config.etherscan_key.clone());
-    let block = geth.block(block_number);
-    log::info!(
-        "tail block {} {} transactions",
-        block_number,
-        block.transactions.len()
-    );
-    let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
-    let abi_pool = ethabi::Contract::load(abi_file).unwrap();
-    let transactions_with_to: Vec<_> = block
-        .transactions
-        .into_iter()
-        .filter(|t| t.to.is_some())
-        .collect();
-    let transactions_to_known_pools = transactions_with_to.into_iter().filter(|t| {
-        sql.q(uniswap::v2::Pool::find_by_contract_address(
-            t.to.as_ref().unwrap().as_str().into(),
-        ))
-        .is_empty()
-        .not()
-    });
-    for transaction in transactions_to_known_pools {
-        let swap = abi_pool.function("swap").unwrap();
-        let swap_sig = hex::encode(swap.short_signature());
-        if transaction.input[2..10] == swap_sig {
-            log::info!("tx {}", transaction.hash);
-            let input_params = &transaction.input[10..];
-            let input_bytes = hex::decode(input_params).unwrap();
-            let input_tokens = swap.decode_input(&input_bytes).unwrap();
-            let callback = input_tokens[3].clone().into_bytes().unwrap();
-            let to = transaction.to.unwrap();
+    let logs = geth.logs(block_number);
+    // let p = ethabi::Param::deserialize(vec![1u8, 2]);
+    for log in logs {
+        if log.topics[0] == SWAP_TOPIC && log.data.len() > 2 {
             log::info!(
-                "swap pool {} token0 {:?} token1 {:?} to {:?} callback {:?}",
-                to,
-                input_tokens[0],
-                input_tokens[1],
-                input_tokens[2],
-                hex::encode(&callback)
-            );
-            //let callback_tokens = swap.decode_input(&callback).unwrap();
-            //log::info!("swap pool callback {:?}", callback_tokens);
-            // let internal_txs = etherscan.tx_list_internal(transaction.hash).unwrap();
-            // log::info!("swap pool internal txs {:#?}", internal_txs);
-            // let token_xfers = etherscan.tx_token_xfer(to, block_number).unwrap();
-            // for xfer in token_xfers {
-            //     let index = i64::from_str_radix(
-            //         &transaction.transaction_index.strip_prefix("0x").unwrap(),
-            //         16,
-            //     )
-            //     .unwrap();
-            //     if index.to_string() == xfer.transaction_index {
-            //         log::info!(
-            //             "swap {} {} {} {}",
-            //             xfer.from,
-            //             xfer.to,
-            //             xfer.value,
-            //             xfer.token_name
-            //         );
-            //     }
-            // }
-            let logs = geth.logs(block_number);
-            for log in logs {
-                if log.topics[0]
-                    == "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
-                {
-                    log::info!("swap {:?}", log)
-                }
-            }
+                "swap from {} to {} value {} ",
+                log.topics[1],
+                log.topics[2],
+                u128::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16).unwrap(),
+            )
         }
     }
 }
