@@ -56,7 +56,8 @@ fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
                 log.topics[1],
                 log.topics[2],
                 u128::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16).unwrap(),
-            )
+            );
+            sql.insert(log.to_upsert_sql());
         }
     }
 }

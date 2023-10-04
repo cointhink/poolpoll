@@ -24,35 +24,24 @@ impl dyn Ops {
             .map(|x| format!("${}", x))
             .collect::<Vec<_>>()
             .join(", ");
-        let conflict = format!(
-            "({}) DO UPDATE SET {}",
-            column_index_names.join(", "),
-            column_other_names
-                .into_iter()
-                .map(|x| format!("{} = EXCLUDED.{}", x, x))
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
+        let conflict = if column_index_names.len() > 0 {
+            format!(
+                "({}) DO UPDATE SET {}",
+                column_index_names.join(", "),
+                column_other_names
+                    .into_iter()
+                    .map(|x| format!("{} = EXCLUDED.{}", x, x))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        } else {
+            format!("DO NOTHING")
+        };
         let select = sql::Insert::new()
             .insert_into(&format!("{} ({})", table_name, all_names.join(", ")))
             .values(&format!("({})", value_positions))
             .on_conflict(&conflict);
         (select.as_string(), column_values)
-        // let select = sql::Insert::new()
-        //     .insert_into("reserves (pool_index, block_number, x, y)")
-        //     .values("($1, $2, $3, $4)")
-        //     .on_conflict(
-        //         "(pool_index, block_number) DO UPDATE SET x = EXCLUDED.x, y = EXCLUDED.y;",
-        //     );
-        // (
-        //     select.as_string(),
-        //     vec![
-        //         Box::new(self.pool.index),
-        //         Box::new(self.block_number as i32),
-        //         Box::new(format!("{}", self.x)),
-        //         Box::new(format!("{}", self.y)),
-        //     ],
-        // )
     }
 }
 
