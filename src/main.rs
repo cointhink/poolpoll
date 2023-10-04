@@ -1,8 +1,10 @@
+use std::thread;
+use std::time::Duration;
+
 use crate::coin::Coin;
 use crate::erc20::Erc20;
 use crate::sql::Ops;
 use ethereum_types::Address;
-use serde::Deserialize;
 
 mod coin;
 mod config;
@@ -29,17 +31,29 @@ fn main() {
         .set(ethabi::Contract::load(abi_file).unwrap())
         .unwrap();
 
-    let last_block_number = 18224212; //geth.last_block_number();
+    let last_block_number = geth.last_block_number();
     log::info!("eth last block number {}", last_block_number);
     if std::env::args().find(|arg| arg == "discover").is_some() {
         discover(&geth, &mut sql, last_block_number);
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
         refresh(&geth, &mut sql, last_block_number);
     } else if std::env::args().find(|arg| arg == "tail").is_some() {
+        let mut last_block_number = last_block_number;
         let mut block_number = last_block_number;
         loop {
             tail(&geth, &mut sql, block_number);
             block_number = block_number + 1;
+            while block_number > last_block_number {
+                log::info!("sleeping 5 sec");
+                thread::sleep(Duration::from_secs(5));
+                let previous_block_number = last_block_number;
+                last_block_number = geth.last_block_number();
+                log::info!(
+                    "updated last_block_number from {} to {}",
+                    previous_block_number,
+                    last_block_number
+                );
+            }
         }
     } else {
         log::info!("commands: discover, refresh, tail")
@@ -55,7 +69,8 @@ fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
                 "swap from {} to {} value {} ",
                 log.topics[1],
                 log.topics[2],
-                u128::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16).unwrap(),
+                ethereum_types::U256::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16)
+                    .unwrap(),
             );
             sql.insert(log.to_upsert_sql());
         }
