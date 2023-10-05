@@ -7,6 +7,8 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::sql::SqlQuery;
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransactionReceipt {
@@ -228,6 +230,12 @@ pub struct InfuraLog {
     // { "address": "0x8306300ffd616049fd7e4b0354a64da835c1a81c", "blockHash": "0xae7dd19381472fd2d97c18d8e4e4454c9859a2279e882e02f922f924e2fdc558", "blockNumber": "0x116cfd6", "data": "0x000000000000000000000000000000000000000000000000009778e5c5e0add5", "logIndex": "0x110", "removed": false,
     //   "topics": [ "0x3d0ce9bfc3ed7d6862dbb28b2dea94561fe714a1b4d019aa8af39730d1ad7c3d", "0x0000000000000000000000001f9090aae28b8a3dceadf281b0f12828e676c326" ],
     //   "transactionHash": "0x9f125fec2a4158e4d87ff7d07adb3048580f4a6a5dbad0cca646d880f9785e35", "transactionIndex": "0x79" }
+}
+
+impl InfuraLog {
+    pub fn last_block_number() -> crate::sql::SqlQuery {
+        <dyn crate::Ops>::last_column("logs", "block_number")
+    }
 }
 
 impl crate::sql::Ops for InfuraLog {

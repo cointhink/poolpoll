@@ -38,21 +38,20 @@ fn main() {
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
         refresh(&geth, &mut sql, last_block_number);
     } else if std::env::args().find(|arg| arg == "tail").is_some() {
-        let mut last_block_number = last_block_number;
-        let mut block_number = last_block_number;
         loop {
-            tail(&geth, &mut sql, block_number);
-            block_number = block_number + 1;
-            while block_number > last_block_number {
-                log::info!("sleeping 5 sec");
+            let geth_block_number = geth.last_block_number();
+            let db_block_number = sql
+                .q_last(geth::InfuraLog::last_block_number())
+                .get::<&str, u32>("block_number");
+            log::info!(
+                "last_block_number {} db_block_number {}",
+                geth_block_number,
+                db_block_number
+            );
+            if db_block_number < geth_block_number {
+                tail(&geth, &mut sql, db_block_number + 1);
+                log::info!("sleeping 5 sec on block {}", db_block_number);
                 thread::sleep(Duration::from_secs(5));
-                let previous_block_number = last_block_number;
-                last_block_number = geth.last_block_number();
-                log::info!(
-                    "updated last_block_number from {} to {}",
-                    previous_block_number,
-                    last_block_number
-                );
             }
         }
     } else {

@@ -1,7 +1,6 @@
 use crate::config;
-use sql_query_builder as sql;
-//use rust_decimal::Decimal;
 use postgres::types::ToSql;
+use sql_query_builder as sql;
 
 pub type SqlQuery = (String, Vec<Box<dyn ToSql + Sync>>);
 
@@ -10,6 +9,16 @@ pub trait Ops {
 }
 
 impl dyn Ops {
+    pub fn last_column(table_name: &str, column_name: &str) -> SqlQuery {
+        let sort_order = "desc";
+        let select = sql::Select::new()
+            .select(column_name)
+            .from(table_name)
+            .order_by(&format!("{} {}", column_name, sort_order))
+            .limit("1");
+        (select.as_string(), vec![])
+    }
+
     pub fn upsert_sql(
         table_name: &str,
         column_index_names: Vec<&str>,
@@ -60,6 +69,10 @@ pub(crate) fn new() -> Client {
 }
 
 impl Client {
+    pub fn q_last(&mut self, query: SqlQuery) -> postgres::Row {
+        self.q(query).into_iter().last().unwrap()
+    }
+
     pub fn q(&mut self, query: SqlQuery) -> Vec<postgres::Row> {
         let params: Vec<&(dyn ToSql + Sync)> = query.1.iter().map(|y| &**y).collect();
         self.client.query(&query.0, &params).unwrap()
