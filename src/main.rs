@@ -39,53 +39,63 @@ fn main() {
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
         refresh(&geth, &mut sql, last_block_number);
     } else if std::env::args().find(|arg| arg == "tail").is_some() {
-        let mut geth_block_number = last_block_number;
-        loop {
-            let db_block_number = InfuraLog::last_block_number(&mut sql);
-            log::info!(
-                "last_block_number {} db_block_number {}",
-                geth_block_number,
-                db_block_number
-            );
-            if db_block_number < geth_block_number {
-                let fetch_block_number = db_block_number + 1;
-                log::info!("fetching logs for block {}", fetch_block_number);
-                tail(&geth, &mut sql, fetch_block_number);
-                if geth_block_number == fetch_block_number {
-                    log::info!("sleeping 5 sec at block {}", db_block_number);
-                    thread::sleep(Duration::from_secs(5));
-                    log::info!("updating block number");
-                    geth_block_number = geth.last_block_number();
-                }
-            }
-        }
+        tail_from(&geth, &mut sql, last_block_number);
     } else {
         log::info!("commands: discover, refresh, tail")
     }
 }
 
-fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
-    let logs = geth.logs(block_number);
-    // let p = ethabi::Param::deserialize(vec![1u8, 2]);
-    for log in logs {
-        if log.topics[0] == SWAP_TOPIC && log.data.len() > 2 {
-            if log.topics.len() == 3 {
-                log::info!(
-                    "swap from {} to {} value {} ",
-                    log.topics[1],
-                    log.topics[2],
-                    ethereum_types::U256::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16)
-                        .unwrap(),
-                );
-                sql.insert(log.to_upsert_sql());
-            } else {
-                log::info!(
-                    "warning: log is swap but only {} topics {:?}",
-                    log.topics.len(),
-                    log
-                )
+fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: u32) {
+    let mut geth_block_number = last_block_number;
+    loop {
+        let db_block_number = InfuraLog::last_block_number(&mut sql);
+        log::info!(
+            "last_block_number {} db_block_number {}",
+            geth_block_number,
+            db_block_number
+        );
+        if db_block_number < geth_block_number {
+            let fetch_block_number = db_block_number + 1;
+            log::info!("fetching logs for block {}", fetch_block_number);
+            let swap_logs = geth
+                .logs(fetch_block_number)
+                .into_iter()
+                .filter(topic_filter)
+                .collect::<Vec<InfuraLog>>();
+            for log in swap_logs {
+                sql.insert(log.to_upsert_sql())
+            }
+            if geth_block_number == fetch_block_number {
+                log::info!("sleeping 5 sec at block {}", db_block_number);
+                thread::sleep(Duration::from_secs(5));
+                log::info!("updating block number");
+                geth_block_number = geth.last_block_number();
             }
         }
+    }
+}
+
+fn topic_filter(log: &InfuraLog) -> bool {
+    if log.topics[0] == SWAP_TOPIC && log.data.len() > 2 {
+        if log.topics.len() == 3 {
+            log::info!(
+                "swap from {} to {} value {} ",
+                log.topics[1],
+                log.topics[2],
+                ethereum_types::U256::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16)
+                    .unwrap(),
+            );
+            true
+        } else {
+            log::info!(
+                "warning: log is swap but only {} topics {:?}",
+                log.topics.len(),
+                log
+            );
+            false
+        }
+    } else {
+        false
     }
 }
 
