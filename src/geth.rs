@@ -7,8 +7,6 @@ use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::sql::SqlQuery;
-
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TransactionReceipt {
@@ -59,7 +57,6 @@ impl Client {
         method: &str,
         params: ParamTypes,
     ) -> Result<String, Box<dyn std::error::Error>> {
-        log::info!("rpcstr {} {:?}", method, params);
         let result = self.rpc(method, params);
         match result {
             Ok(rpc_result) => match rpc_result.part {
@@ -136,7 +133,6 @@ impl Client {
             method: method.to_string(),
             params: params,
         };
-        log::info!("{:#?}", jrpc);
         let result = ureq::post(&self.url).send_json(&jrpc);
         match result {
             Ok(res) => {
@@ -233,7 +229,14 @@ pub struct InfuraLog {
 }
 
 impl InfuraLog {
-    pub fn last_block_number() -> crate::sql::SqlQuery {
+    pub fn last_block_number(sql: &mut crate::sql::Client) -> u32 {
+        let row = sql.q_last(crate::geth::InfuraLog::last_block_number_sql());
+        match row {
+            Some(row) => row.get::<&str, i32>("block_number") as u32,
+            None => 10_000_000,
+        }
+    }
+    pub fn last_block_number_sql() -> crate::sql::SqlQuery {
         <dyn crate::Ops>::last_column("logs", "block_number")
     }
 }
@@ -243,15 +246,35 @@ impl crate::sql::Ops for InfuraLog {
         <dyn crate::Ops>::upsert_sql(
             "logs",
             vec![],
-            vec!["transaction_hash", "value", "topic0", "topic1", "topic2"],
             vec![
-                Box::new(self.transaction_hash.strip_prefix("0x").unwrap().to_owned()),
+                "address",
+                "block_hash",
+                "block_number",
+                "value",
+                "topic0",
+                "topic1",
+                "topic2",
+                "transaction_hash",
+                "transaction_index",
+            ],
+            vec![
+                Box::new(self.address.strip_prefix("0x").unwrap().to_owned()),
+                Box::new(self.block_hash.strip_prefix("0x").unwrap().to_owned()),
+                Box::new(
+                    i32::from_str_radix(&self.block_number.strip_prefix("0x").unwrap(), 16)
+                        .unwrap(),
+                ),
                 Box::new(
                     Decimal::from_str_radix(self.data.strip_prefix("0x").unwrap(), 16).unwrap(),
                 ),
                 Box::new(self.topics[0].strip_prefix("0x").unwrap().to_owned()),
                 Box::new(self.topics[1].strip_prefix("0x").unwrap().to_owned()),
                 Box::new(self.topics[2].strip_prefix("0x").unwrap().to_owned()),
+                Box::new(self.transaction_hash.strip_prefix("0x").unwrap().to_owned()),
+                Box::new(
+                    i32::from_str_radix(&self.transaction_index.strip_prefix("0x").unwrap(), 16)
+                        .unwrap(),
+                ),
             ],
         )
     }

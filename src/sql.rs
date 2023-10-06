@@ -69,8 +69,13 @@ pub(crate) fn new() -> Client {
 }
 
 impl Client {
-    pub fn q_last(&mut self, query: SqlQuery) -> postgres::Row {
-        self.q(query).into_iter().last().unwrap()
+    pub fn q_last(&mut self, query: SqlQuery) -> Option<postgres::Row> {
+        let row = self.q(query);
+        if row.len() > 0 {
+            Some(row.into_iter().last().unwrap())
+        } else {
+            None
+        }
     }
 
     pub fn q(&mut self, query: SqlQuery) -> Vec<postgres::Row> {

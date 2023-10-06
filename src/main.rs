@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use crate::coin::Coin;
 use crate::erc20::Erc20;
+use crate::geth::InfuraLog;
 use crate::sql::Ops;
 use ethereum_types::Address;
 
@@ -38,20 +39,24 @@ fn main() {
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
         refresh(&geth, &mut sql, last_block_number);
     } else if std::env::args().find(|arg| arg == "tail").is_some() {
+        let mut geth_block_number = last_block_number;
         loop {
-            let geth_block_number = geth.last_block_number();
-            let db_block_number = sql
-                .q_last(geth::InfuraLog::last_block_number())
-                .get::<&str, u32>("block_number");
+            let db_block_number = InfuraLog::last_block_number(&mut sql);
             log::info!(
                 "last_block_number {} db_block_number {}",
                 geth_block_number,
                 db_block_number
             );
             if db_block_number < geth_block_number {
-                tail(&geth, &mut sql, db_block_number + 1);
-                log::info!("sleeping 5 sec on block {}", db_block_number);
-                thread::sleep(Duration::from_secs(5));
+                let fetch_block_number = db_block_number + 1;
+                log::info!("fetching logs for block {}", fetch_block_number);
+                tail(&geth, &mut sql, fetch_block_number);
+                if geth_block_number == fetch_block_number {
+                    log::info!("sleeping 5 sec at block {}", db_block_number);
+                    thread::sleep(Duration::from_secs(5));
+                    log::info!("updating block number");
+                    geth_block_number = geth.last_block_number();
+                }
             }
         }
     } else {
@@ -64,14 +69,22 @@ fn tail(geth: &geth::Client, sql: &mut sql::Client, block_number: u32) {
     // let p = ethabi::Param::deserialize(vec![1u8, 2]);
     for log in logs {
         if log.topics[0] == SWAP_TOPIC && log.data.len() > 2 {
-            log::info!(
-                "swap from {} to {} value {} ",
-                log.topics[1],
-                log.topics[2],
-                ethereum_types::U256::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16)
-                    .unwrap(),
-            );
-            sql.insert(log.to_upsert_sql());
+            if log.topics.len() == 3 {
+                log::info!(
+                    "swap from {} to {} value {} ",
+                    log.topics[1],
+                    log.topics[2],
+                    ethereum_types::U256::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16)
+                        .unwrap(),
+                );
+                sql.insert(log.to_upsert_sql());
+            } else {
+                log::info!(
+                    "warning: log is swap but only {} topics {:?}",
+                    log.topics.len(),
+                    log
+                )
+            }
         }
     }
 }
