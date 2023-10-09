@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use crate::coin::Coin;
 use crate::erc20::Erc20;
-use crate::geth::InfuraLog;
+use crate::geth::{InfuraBlock, InfuraLog};
 use crate::sql::Ops;
 use ethereum_types::Address;
 
@@ -48,7 +48,7 @@ fn main() {
 fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: u32) {
     let mut geth_block_number = last_block_number;
     loop {
-        let db_block_number = InfuraLog::last_block_number(&mut sql);
+        let db_block_number = InfuraBlock::last_block_number(&mut sql);
         log::info!(
             "last_block_number {} db_block_number {}",
             geth_block_number,
@@ -57,6 +57,7 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
         if db_block_number < geth_block_number {
             let fetch_block_number = db_block_number + 1;
             log::info!("fetching logs for block {}", fetch_block_number);
+            let block = geth.block(fetch_block_number);
             let swap_logs = geth
                 .logs(fetch_block_number)
                 .into_iter()
@@ -71,6 +72,8 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
                 log::info!("updating block number");
                 geth_block_number = geth.last_block_number();
             }
+            // mark block as visited
+            sql.insert(block.to_upsert_sql())
         }
     }
 }

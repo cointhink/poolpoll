@@ -228,19 +228,6 @@ pub struct InfuraLog {
     //   "transactionHash": "0x9f125fec2a4158e4d87ff7d07adb3048580f4a6a5dbad0cca646d880f9785e35", "transactionIndex": "0x79" }
 }
 
-impl InfuraLog {
-    pub fn last_block_number(sql: &mut crate::sql::Client) -> u32 {
-        let row = sql.q_last(crate::geth::InfuraLog::last_block_number_sql());
-        match row {
-            Some(row) => row.get::<&str, i32>("block_number") as u32,
-            None => 10_000_000,
-        }
-    }
-    pub fn last_block_number_sql() -> crate::sql::SqlQuery {
-        <dyn crate::Ops>::last_column("logs", "block_number")
-    }
-}
-
 impl crate::sql::Ops for InfuraLog {
     fn to_upsert_sql(&self) -> crate::sql::SqlQuery {
         <dyn crate::Ops>::upsert_sql(
@@ -280,12 +267,48 @@ impl crate::sql::Ops for InfuraLog {
     }
 }
 
+fn hexstr_to_u32<'de, D>(str: D) -> Result<u32, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let json_str = String::deserialize(str)?;
+    let num = u32::from_str_radix(json_str.strip_prefix("0x").unwrap(), 16).unwrap();
+    Ok(num)
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InfuraBlock {
-    pub difficulty: String,
     pub hash: String,
-    pub number: String,
+    #[serde(deserialize_with = "hexstr_to_u32")]
+    pub number: u32,
     pub transactions: Vec<InfuraTransaction>,
+}
+
+impl InfuraBlock {
+    pub fn last_block_number(sql: &mut crate::sql::Client) -> u32 {
+        let row = sql.q_last(Self::last_block_number_sql());
+        match row {
+            Some(row) => row.get::<&str, i32>("number") as u32,
+            None => 10_000_000,
+        }
+    }
+    pub fn last_block_number_sql() -> crate::sql::SqlQuery {
+        <dyn crate::Ops>::last_column("blocks", "number")
+    }
+}
+
+impl crate::sql::Ops for InfuraBlock {
+    fn to_upsert_sql(&self) -> crate::sql::SqlQuery {
+        <dyn crate::Ops>::upsert_sql(
+            "blocks",
+            vec!["number"],
+            vec!["hash"],
+            vec![
+                Box::new(self.number as i32),
+                Box::new(self.hash.strip_prefix("0x").unwrap().to_owned()),
+            ],
+        )
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
