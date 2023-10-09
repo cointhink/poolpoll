@@ -139,11 +139,8 @@ fn discover(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
         refresh_token(&geth, sql, tokens.0);
         refresh_token(&geth, sql, tokens.1);
 
-        let reserves = uniswap::v2::Pool::reserves(&geth, &abi_pool, &address, eth_block).unwrap();
-        let pool_reserves = uniswap::v2::Reserves::new(&pool, eth_block, reserves);
-        log::info!("Uniswap v2 pool info #0 {:?} {:?}", pool, reserves);
+        log::info!("Uniswap v2 pool info #0 {:?}", pool);
         sql.insert(pool.to_upsert_sql());
-        sql.insert(pool_reserves.to_upsert_sql());
     }
 }
 
