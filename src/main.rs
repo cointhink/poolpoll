@@ -16,8 +16,6 @@ mod log;
 mod sql;
 mod uniswap;
 
-const SWAP_TOPIC: &str = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
-
 fn main() {
     log::init();
     config::CONFIG.set(config::load("config.yaml")).unwrap();
@@ -59,14 +57,13 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
         );
         if db_block_number < geth_block_number {
             let fetch_block_number = db_block_number + 1;
-            log::info!("fetching logs for block {}", fetch_block_number);
             let block = geth.block(fetch_block_number);
             let swap_logs = geth
                 .logs(fetch_block_number)
                 .into_iter()
                 .filter(topic_filter)
                 .collect::<Vec<InfuraLog>>();
-            for log in swap_logs {
+            for log in &swap_logs {
                 sql.insert(log.to_upsert_sql())
             }
             if geth_block_number == fetch_block_number {
@@ -76,13 +73,14 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
                 geth_block_number = geth.last_block_number();
             }
             // mark block as visited
-            sql.insert(block.to_upsert_sql())
+            sql.insert(block.to_upsert_sql());
+            log::info!("block #{} {} logs", fetch_block_number, swap_logs.len());
         }
     }
 }
 
 fn topic_filter(log: &InfuraLog) -> bool {
-    if log.topics[0] == SWAP_TOPIC && log.data.len() > 2 {
+    if log.topics[0] == erc20::TOPIC_TRANSFER && log.data.len() > 2 {
         if log.topics.len() == 3 {
             log::info!(
                 "swap from {} to {} value {} ",

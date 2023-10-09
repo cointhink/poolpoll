@@ -84,7 +84,7 @@ impl Client {
     }
 
     pub fn insert(&mut self, query: SqlQuery) {
-        log::info!("sql: {} {:?}", query.0, query.1);
+        log::debug!("sql: {} {:?}", query.0, query.1);
         // expected `&[&dyn ToSql + Sync]`, found `&Vec<Box<dyn ToSql + Sync>>`
         // self.client.execute(&query.0, &query.1).unwrap();
 

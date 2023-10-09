@@ -5,6 +5,10 @@ use ethereum_types::Address;
 use ethereum_types::U256;
 use std::sync::OnceLock;
 
+// $ echo -n 'Transfer(address,address,uint256)' | sha3sum -a keccak256
+pub const TOPIC_TRANSFER: &str =
+    "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
 pub static ABI: OnceLock<Contract> = OnceLock::new();
 
 #[derive(Debug, Default)]

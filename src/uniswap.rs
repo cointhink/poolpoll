@@ -3,15 +3,15 @@ pub mod v3 {
 }
 
 pub mod v2 {
-    use std::error::Error;
     use crate::{geth::Client, sql::SqlQuery};
     use ethabi::token::Token;
     use ethabi::Contract;
     use ethereum_types::{Address, U256};
-    use sql_query_builder as sql;
-    use std::sync::OnceLock;
     use postgres::types::private::BytesMut;
     use postgres::types::{IsNull, Type};
+    use sql_query_builder as sql;
+    use std::error::Error;
+    use std::sync::OnceLock;
 
     const UNISWAP_FACTORY: &str = "5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
     pub static ABI: OnceLock<Contract> = OnceLock::new();
@@ -23,20 +23,36 @@ pub mod v2 {
 
     impl From<&str> for AddressStringNox {
         fn from(value: &str) -> Self {
-            AddressStringNox { value: value.strip_prefix("0x").unwrap().to_owned() }
+            AddressStringNox {
+                value: value.strip_prefix("0x").unwrap().to_owned(),
+            }
         }
     }
 
     impl postgres::types::ToSql for AddressStringNox {
-        fn to_sql(&self, ty: &Type, out: &mut BytesMut) -> Result<IsNull, Box<dyn Error + Sync + Send>> where Self: Sized {
+        fn to_sql(
+            &self,
+            ty: &Type,
+            out: &mut BytesMut,
+        ) -> Result<IsNull, Box<dyn Error + Sync + Send>>
+        where
+            Self: Sized,
+        {
             self.value.to_sql(ty, out)
         }
 
-        fn accepts(ty: &Type) -> bool where Self: Sized {
+        fn accepts(ty: &Type) -> bool
+        where
+            Self: Sized,
+        {
             <String as postgres::types::ToSql>::accepts(ty)
         }
 
-        fn to_sql_checked(&self, ty: &Type, out: &mut BytesMut) -> Result<IsNull, Box<dyn Error + Sync + Send>> {
+        fn to_sql_checked(
+            &self,
+            ty: &Type,
+            out: &mut BytesMut,
+        ) -> Result<IsNull, Box<dyn Error + Sync + Send>> {
             self.value.to_sql_checked(ty, out)
         }
     }
@@ -101,6 +117,7 @@ pub mod v2 {
             (select.to_string(), vec![Box::new(uniswap_v2_index)])
         }
 
+        #[allow(dead_code)]
         pub fn find_by_contract_address(contract_address: AddressStringNox) -> SqlQuery {
             let select = sql::Select::new()
                 .select("*")
