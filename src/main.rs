@@ -35,7 +35,7 @@ fn main() {
     let last_block_number = geth.last_block_number();
     log::info!("eth last block number {}", last_block_number);
     if std::env::args().find(|arg| arg == "discover").is_some() {
-        discover(&geth, &mut sql, last_block_number);
+        discover(&geth, &mut sql);
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
         refresh(&geth, &mut sql, last_block_number);
     } else if std::env::args().find(|arg| arg == "tail").is_some() {
@@ -48,7 +48,10 @@ fn main() {
 fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: u32) {
     let mut geth_block_number = last_block_number;
     loop {
-        let db_block_number = InfuraBlock::last_block_number(&mut sql);
+        let db_block_number = match InfuraBlock::last_block_number(&mut sql) {
+            Some(number) => number,
+            None => last_block_number - (60 / 12 * 60 * 24), // 1 day in eth blocks
+        };
         log::info!(
             "last_block_number {} db_block_number {}",
             geth_block_number,
@@ -116,7 +119,7 @@ fn refresh(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
     }
 }
 
-fn discover(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
+fn discover(geth: &geth::Client, sql: &mut sql::Client) {
     uniswap::v2::Factory::setup();
     let pool_count = uniswap::v2::Factory::pool_count(&geth);
     let sql_pool_count = uniswap::v2::Factory::sql_pool_count(sql);

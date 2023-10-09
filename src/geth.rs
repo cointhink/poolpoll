@@ -285,14 +285,14 @@ pub struct InfuraBlock {
 }
 
 impl InfuraBlock {
-    pub fn last_block_number(sql: &mut crate::sql::Client) -> u32 {
-        let row = sql.q_last(Self::last_block_number_sql());
-        match row {
-            Some(row) => row.get::<&str, i32>("number") as u32,
-            None => 10_000_000,
+    pub fn last_block_number(db: &mut crate::sql::Client) -> Option<u32> {
+        let sql = Self::last_block_number_sql();
+        match db.q_last(sql) {
+            Some(row) => Some(row.get::<&str, i32>("number") as u32),
+            None => None,
         }
     }
-    pub fn last_block_number_sql() -> crate::sql::SqlQuery {
+    fn last_block_number_sql() -> crate::sql::SqlQuery {
         <dyn crate::Ops>::last_column("blocks", "number")
     }
 }
