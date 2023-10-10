@@ -57,13 +57,13 @@ impl Erc20 {
 pub fn topic_filter_transfer(log: &&InfuraLog) -> bool {
     if log.topics[0] == TOPIC_TRANSFER && log.data.len() > 2 {
         if log.topics.len() == 3 {
-            log::info!(
-                "swap from {} to {} value {} ",
-                log.topics[1],
-                log.topics[2],
-                ethereum_types::U256::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16)
-                    .unwrap(),
-            );
+            // log::info!(
+            //     "swap from {} to {} value {} ",
+            //     log.topics[1],
+            //     log.topics[2],
+            //     ethereum_types::U256::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16)
+            //         .unwrap(),
+            // );
             true
         } else {
             log::info!(

@@ -109,7 +109,6 @@ impl Client {
         {
             RpcResultTypes::Result(r) => {
                 if let ResultTypes::Logs(logs) = r.result {
-                    log::info!("got {} logs", logs.len());
                     logs
                 } else {
                     todo!()

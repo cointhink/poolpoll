@@ -3,6 +3,7 @@ pub mod v3 {
 }
 
 pub mod v2 {
+    use crate::geth::InfuraLog;
     use crate::{geth::Client, sql::SqlQuery};
     use ethabi::token::Token;
     use ethabi::Contract;
@@ -79,6 +80,10 @@ pub mod v2 {
             abi: &Contract,
             address: &Address,
         ) -> Result<(Address, Address), Box<dyn std::error::Error>> {
+            let swap_event = &abi.events_by_name("Swap").unwrap()[0];
+            log::info!("swap event {:?}", swap_event);
+            let swap_f = &abi.functions_by_name("swap").unwrap()[0];
+            log::info!("swap sig {:?} {}", swap_f, swap_f.signature());
             let result_t0 = geth.eth_call(address, abi, "token0", &vec![], None)?;
             let Token::Address(addr_t0) = result_t0[0] else {
                 println!("{:?}", result_t0[0]);
@@ -235,5 +240,10 @@ pub mod v2 {
             };
             return Ok(addr);
         }
+    }
+    pub fn topic_filter_swap(log: &&InfuraLog) -> bool {
+        // swap(uint256,uint256,address,bytes)
+        const TOPIC_SWAP: &str = "022c0d9f14a579d1d17baf9fddaebffc4a661f18e5dbcdf9b78b0e655ef26681";
+        log.topics[0] == TOPIC_SWAP
     }
 }

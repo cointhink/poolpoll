@@ -50,21 +50,26 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
             Some(number) => number,
             None => last_block_number - (60 / 12 * 60 * 24), // 1 day in eth blocks
         };
-        log::info!(
-            "last_block_number {} db_block_number {}",
-            geth_block_number,
-            db_block_number
-        );
         if db_block_number < geth_block_number {
             let fetch_block_number = db_block_number + 1;
+            log::info!(
+                "fetching block {} geth_block_number {} db_block_number {}",
+                fetch_block_number,
+                geth_block_number,
+                db_block_number
+            );
             let block = geth.block(fetch_block_number);
             let logs = geth.logs(fetch_block_number);
             for log in &logs {
                 sql.insert(log.to_upsert_sql())
             }
-            let _swap_logs = logs
+            let erc20_transfer_logs = logs
                 .iter()
-                .filter(crate::erc20::topic_filter_transfer)
+                .filter(erc20::topic_filter_transfer)
+                .collect::<Vec<&InfuraLog>>();
+            let uniswap_swap_logs = logs
+                .iter()
+                .filter(uniswap::v2::topic_filter_swap)
                 .collect::<Vec<&InfuraLog>>();
             if geth_block_number == fetch_block_number {
                 log::info!("sleeping 5 sec at block {}", db_block_number);
@@ -74,7 +79,13 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
             }
             // mark block as visited
             sql.insert(block.to_upsert_sql());
-            log::info!("block #{} {} logs", fetch_block_number, logs.len());
+            log::info!(
+                "block #{} {} logs. {} erc20 transfer logs. {} uniswap swap logs",
+                fetch_block_number,
+                logs.len(),
+                erc20_transfer_logs.len(),
+                uniswap_swap_logs.len()
+            );
         }
     }
 }
