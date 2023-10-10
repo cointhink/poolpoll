@@ -1,6 +1,5 @@
 CREATE TABLE pools (
     contract_address VARCHAR(40) PRIMARY KEY,
-    uniswap_v2_index INTEGER UNIQUE,
     token0 VARCHAR(40),
     token1 VARCHAR(40)
 );

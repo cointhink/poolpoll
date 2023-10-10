@@ -99,51 +99,50 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
     }
 }
 
-fn refresh(geth: &geth::Client, sql: &mut sql::Client, eth_block: u32) {
-    let sql_pool_count = uniswap::v2::Factory::sql_pool_count(sql);
-    for pool_idx in 0..sql_pool_count {
-        log::info!(
-            "{:?}",
-            uniswap::v2::Pool::find_by_uniswap_v2_index(pool_idx as i32)
-        );
-        let rows = sql.q(uniswap::v2::Pool::find_by_uniswap_v2_index(pool_idx as i32));
-        let pool = uniswap::v2::Pool::from(&rows[0]);
+fn refresh(geth: &geth::Client, db: &mut sql::Client, eth_block: u32) {
+    let sql = uniswap::v2::Pool::all();
+    let rows = db.q(sql);
+    for row in rows {
+        let pool = uniswap::v2::Pool::from(&row);
         log::info!("refresh: {:?}", pool);
-        update_pool_reserves(geth, sql, &pool, eth_block);
+        update_pool_reserves(geth, db, &pool, eth_block);
     }
 }
 
 fn discover(geth: &geth::Client, sql: &mut sql::Client) {
     uniswap::v2::Factory::setup();
-    let pool_count = uniswap::v2::Factory::pool_count(&geth);
-    let sql_pool_count = uniswap::v2::Factory::sql_pool_count(sql);
-    log::info!(
-        "Uniswap v2 contract count {:?} (db highest {:?})",
-        pool_count,
-        sql_pool_count
-    );
+    let pool_count = uniswap::v2::Factory::pool_count(&geth).unwrap().low_u64();
+    log::info!("Uniswap v2 contract count {:?}", pool_count,);
     let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
     let abi_pool = ethabi::Contract::load(abi_file).unwrap();
-    for pool_idx in sql_pool_count..sql_pool_count + 10 {
+    for pool_idx in pool_count - 10..pool_count {
         let address = uniswap::v2::Factory::pool_addr(&geth, pool_idx).unwrap();
-        let tokens = crate::uniswap::v2::Pool::tokens(&geth, &abi_pool, &address).unwrap();
-        let pool = uniswap::v2::Pool {
-            uniswap_v2_index: pool_idx as i32,
-            contract_address: address,
-            token0: tokens.0,
-            token1: tokens.1,
-        };
-        refresh_token(&geth, sql, tokens.0);
-        refresh_token(&geth, sql, tokens.1);
-
-        log::info!("Uniswap v2 pool info #0 {:?}", pool);
-        sql.insert(pool.to_upsert_sql());
+        create_pool(geth, sql, &abi_pool, address);
     }
+}
+
+fn create_pool(
+    geth: &geth::Client,
+    sql: &mut sql::Client,
+    abi_pool: &ethabi::Contract,
+    address: Address,
+) {
+    let tokens = crate::uniswap::v2::Pool::tokens(&geth, &abi_pool, &address).unwrap();
+    let pool = uniswap::v2::Pool {
+        contract_address: address,
+        token0: tokens.0,
+        token1: tokens.1,
+    };
+    refresh_token(&geth, sql, tokens.0);
+    refresh_token(&geth, sql, tokens.1);
+
+    log::info!("Uniswap v2 pool info #0 {:?}", pool);
+    sql.insert(pool.to_upsert_sql());
 }
 
 fn update_pool_reserves(
     geth: &geth::Client,
-    sql: &mut crate::sql::Client,
+    sql: &mut sql::Client,
     pool: &uniswap::v2::Pool,
     eth_block: u32,
 ) {

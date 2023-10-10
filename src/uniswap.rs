@@ -56,7 +56,6 @@ pub mod v2 {
 
     #[derive(Debug)]
     pub(crate) struct Pool {
-        pub uniswap_v2_index: i32,
         pub contract_address: Address,
         pub token0: Address,
         pub token1: Address,
@@ -76,10 +75,6 @@ pub mod v2 {
             abi: &Contract,
             address: &Address,
         ) -> Result<(Address, Address), Box<dyn std::error::Error>> {
-            let swap_event = &abi.events_by_name("Swap").unwrap()[0];
-            log::info!("swap event {:?}", swap_event);
-            let swap_f = &abi.functions_by_name("swap").unwrap()[0];
-            log::info!("swap sig {:?} {}", swap_f, swap_f.signature());
             let result_t0 = geth.eth_call(address, abi, "token0", &vec![], None)?;
             let Token::Address(addr_t0) = result_t0[0] else {
                 println!("{:?}", result_t0[0]);
@@ -110,12 +105,9 @@ pub mod v2 {
             Ok((r0, r1))
         }
 
-        pub fn find_by_uniswap_v2_index(uniswap_v2_index: i32) -> SqlQuery {
-            let select = sql::Select::new()
-                .select("*")
-                .from("pools")
-                .where_clause("uniswap_v2_index = $1");
-            (select.to_string(), vec![Box::new(uniswap_v2_index)])
+        pub fn all() -> SqlQuery {
+            let select = sql::Select::new().select("*").from("pools");
+            (select.to_string(), vec![])
         }
 
         pub fn find_by_contract_address(contract_address: AddressStringNox) -> SqlQuery {
@@ -156,7 +148,6 @@ pub mod v2 {
     impl From<&postgres::Row> for Pool {
         fn from(row: &postgres::Row) -> Self {
             Pool {
-                uniswap_v2_index: row.get("uniswap_v2_index"),
                 contract_address: Address::from_slice(
                     &hex::decode(row.get::<_, String>("contract_address")).unwrap(),
                 ),
@@ -171,10 +162,9 @@ pub mod v2 {
             <dyn crate::Ops>::upsert_sql(
                 "pools",
                 vec!["contract_address"],
-                vec!["uniswap_v2_index", "token0", "token1"],
+                vec!["token0", "token1"],
                 vec![
                     Box::new(format!("{:x}", self.contract_address)),
-                    Box::new(self.uniswap_v2_index),
                     Box::new(format!("{:x}", self.token0)),
                     Box::new(format!("{:x}", self.token1)),
                 ],
