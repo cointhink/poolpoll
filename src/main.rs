@@ -43,10 +43,10 @@ fn main() {
     }
 }
 
-fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: u32) {
+fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u32) {
     let mut geth_block_number = last_block_number;
     loop {
-        let db_block_number = match InfuraBlock::last_block_number(&mut sql) {
+        let db_block_number = match InfuraBlock::last_block_number(&mut db) {
             Some(number) => number,
             None => last_block_number - (60 / 12 * 60 * 24), // 1 day in eth blocks
         };
@@ -61,7 +61,7 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
             let block = geth.block(fetch_block_number);
             let logs = geth.logs(fetch_block_number);
             for log in &logs {
-                sql.insert(log.to_upsert_sql())
+                db.insert(log.to_upsert_sql())
             }
             let erc20_transfer_logs = logs
                 .iter()
@@ -78,7 +78,7 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
                 geth_block_number = geth.last_block_number();
             }
             // mark block as visited
-            sql.insert(block.to_upsert_sql());
+            db.insert(block.to_upsert_sql());
             log::info!(
                 "block #{} {} logs. {} erc20 transfer logs. {} uniswap swap logs",
                 fetch_block_number,
@@ -87,9 +87,13 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
                 uniswap_swap_logs.len()
             );
             for log in uniswap_swap_logs {
-                sql.q(uniswap::v2::Pool::find_by_contract_address(
-                    log.address.as_str().into(),
-                ));
+                let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
+                let rows = db.q(sql);
+                if rows.len() > 0 {
+                    log::info!("known pool {:?}", rows[0]);
+                } else {
+                    // discover
+                }
             }
         }
     }
