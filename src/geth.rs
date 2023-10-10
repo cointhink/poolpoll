@@ -1,10 +1,9 @@
 use bs58;
 use ethabi::token::Token;
 use ethabi::Contract;
-use ethereum_types::{Address, U256};
+use ethereum_types::Address;
 use postgres::types::ToSql;
 use rand::Rng;
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -244,7 +243,6 @@ impl crate::sql::Ops for InfuraLog {
             topic_fields.push(format!("topic{}", topic_num))
         }
         fields.append(&mut topic_fields.iter().map(|f| f.as_str()).collect());
-        log::info!("sql data {:?}", self.data);
 
         let mut values: Vec<Box<dyn ToSql + Sync>> = vec![
             Box::new(self.address.strip_prefix("0x").unwrap().to_owned()),

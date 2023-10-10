@@ -62,9 +62,9 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
             for log in &logs {
                 sql.insert(log.to_upsert_sql())
             }
-            let swap_logs = logs
+            let _swap_logs = logs
                 .iter()
-                .filter(topic_filter)
+                .filter(crate::erc20::topic_filter_transfer)
                 .collect::<Vec<&InfuraLog>>();
             if geth_block_number == fetch_block_number {
                 log::info!("sleeping 5 sec at block {}", db_block_number);
@@ -76,30 +76,6 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
             sql.insert(block.to_upsert_sql());
             log::info!("block #{} {} logs", fetch_block_number, logs.len());
         }
-    }
-}
-
-fn topic_filter(log: &&InfuraLog) -> bool {
-    if log.topics[0] == erc20::TOPIC_TRANSFER && log.data.len() > 2 {
-        if log.topics.len() == 3 {
-            log::info!(
-                "swap from {} to {} value {} ",
-                log.topics[1],
-                log.topics[2],
-                ethereum_types::U256::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16)
-                    .unwrap(),
-            );
-            true
-        } else {
-            log::info!(
-                "warning: log is swap but only {} topics {:?}",
-                log.topics.len(),
-                log
-            );
-            false
-        }
-    } else {
-        false
     }
 }
 
