@@ -86,13 +86,19 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                 erc20_transfer_logs.len(),
                 uniswap_swap_logs.len()
             );
+            let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
+            let abi_pool = ethabi::Contract::load(abi_file).unwrap();
             for log in uniswap_swap_logs {
                 let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
                 let rows = db.q(sql);
                 if rows.len() > 0 {
-                    log::info!("known pool {:?}", rows[0]);
+                    let pool = uniswap::v2::Pool::from(&rows[0]);
+                    log::info!("known pool {:?}", pool);
                 } else {
-                    // discover
+                    let log_address = Address::from_slice(
+                        &hex::decode(log.address.strip_prefix("0x").unwrap()).unwrap(),
+                    );
+                    create_pool(geth, db, &abi_pool, log_address);
                 }
             }
         }
