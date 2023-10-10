@@ -18,15 +18,11 @@ pub mod v2 {
     pub static ABI: OnceLock<Contract> = OnceLock::new();
 
     #[derive(Debug)]
-    pub struct AddressStringNox {
-        value: String,
-    }
+    pub struct AddressStringNox(pub String);
 
     impl From<&str> for AddressStringNox {
         fn from(value: &str) -> Self {
-            AddressStringNox {
-                value: value.strip_prefix("0x").unwrap().to_owned(),
-            }
+            AddressStringNox(value.strip_prefix("0x").unwrap().to_owned())
         }
     }
 
@@ -39,7 +35,7 @@ pub mod v2 {
         where
             Self: Sized,
         {
-            self.value.to_sql(ty, out)
+            self.0.to_sql(ty, out)
         }
 
         fn accepts(ty: &Type) -> bool
@@ -54,7 +50,7 @@ pub mod v2 {
             ty: &Type,
             out: &mut BytesMut,
         ) -> Result<IsNull, Box<dyn Error + Sync + Send>> {
-            self.value.to_sql_checked(ty, out)
+            self.0.to_sql_checked(ty, out)
         }
     }
 
@@ -122,7 +118,6 @@ pub mod v2 {
             (select.to_string(), vec![Box::new(uniswap_v2_index)])
         }
 
-        #[allow(dead_code)]
         pub fn find_by_contract_address(contract_address: AddressStringNox) -> SqlQuery {
             let select = sql::Select::new()
                 .select("*")

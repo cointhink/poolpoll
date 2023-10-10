@@ -86,6 +86,11 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
                 erc20_transfer_logs.len(),
                 uniswap_swap_logs.len()
             );
+            for log in uniswap_swap_logs {
+                sql.q(uniswap::v2::Pool::find_by_contract_address(
+                    log.address.as_str().into(),
+                ));
+            }
         }
     }
 }
