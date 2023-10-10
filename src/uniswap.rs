@@ -242,8 +242,9 @@ pub mod v2 {
         }
     }
     pub fn topic_filter_swap(log: &&InfuraLog) -> bool {
-        // swap(uint256,uint256,address,bytes)
-        const TOPIC_SWAP: &str = "022c0d9f14a579d1d17baf9fddaebffc4a661f18e5dbcdf9b78b0e655ef26681";
+        // Swap (index_topic_1 address sender, uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out, index_topic_2 address to)
+        const TOPIC_SWAP: &str =
+            "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822";
         log.topics[0] == TOPIC_SWAP
     }
 }
