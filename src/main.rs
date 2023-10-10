@@ -58,14 +58,14 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
         if db_block_number < geth_block_number {
             let fetch_block_number = db_block_number + 1;
             let block = geth.block(fetch_block_number);
-            let swap_logs = geth
-                .logs(fetch_block_number)
-                .into_iter()
-                .filter(topic_filter)
-                .collect::<Vec<InfuraLog>>();
-            for log in &swap_logs {
+            let logs = geth.logs(fetch_block_number);
+            for log in &logs {
                 sql.insert(log.to_upsert_sql())
             }
+            let swap_logs = logs
+                .iter()
+                .filter(topic_filter)
+                .collect::<Vec<&InfuraLog>>();
             if geth_block_number == fetch_block_number {
                 log::info!("sleeping 5 sec at block {}", db_block_number);
                 thread::sleep(Duration::from_secs(5));
@@ -74,12 +74,12 @@ fn tail_from(geth: &geth::Client, mut sql: &mut sql::Client, last_block_number: 
             }
             // mark block as visited
             sql.insert(block.to_upsert_sql());
-            log::info!("block #{} {} logs", fetch_block_number, swap_logs.len());
+            log::info!("block #{} {} logs", fetch_block_number, logs.len());
         }
     }
 }
 
-fn topic_filter(log: &InfuraLog) -> bool {
+fn topic_filter(log: &&InfuraLog) -> bool {
     if log.topics[0] == erc20::TOPIC_TRANSFER && log.data.len() > 2 {
         if log.topics.len() == 3 {
             log::info!(

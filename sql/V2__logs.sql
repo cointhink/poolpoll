@@ -4,8 +4,11 @@ CREATE TABLE logs (
   block_number Int4,
   transaction_index Int4,
   transaction_hash VARCHAR(64),
-  value NUMERIC(78),
+  data TEXT,
   topic0 VARCHAR(64),
   topic1 VARCHAR(64),
-  topic2 VARCHAR(64)
+  topic2 VARCHAR(64),
+  topic3 VARCHAR(64),
+  topic4 VARCHAR(64),
+  topic5 VARCHAR(64)
 );

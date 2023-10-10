@@ -1,7 +1,8 @@
 use bs58;
 use ethabi::token::Token;
 use ethabi::Contract;
-use ethereum_types::Address;
+use ethereum_types::{Address, U256};
+use postgres::types::ToSql;
 use rand::Rng;
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -230,40 +231,43 @@ pub struct InfuraLog {
 
 impl crate::sql::Ops for InfuraLog {
     fn to_upsert_sql(&self) -> crate::sql::SqlQuery {
-        <dyn crate::Ops>::upsert_sql(
-            "logs",
-            vec![],
-            vec![
-                "address",
-                "block_hash",
-                "block_number",
-                "value",
-                "topic0",
-                "topic1",
-                "topic2",
-                "transaction_hash",
-                "transaction_index",
-            ],
-            vec![
-                Box::new(self.address.strip_prefix("0x").unwrap().to_owned()),
-                Box::new(self.block_hash.strip_prefix("0x").unwrap().to_owned()),
-                Box::new(
-                    i32::from_str_radix(&self.block_number.strip_prefix("0x").unwrap(), 16)
-                        .unwrap(),
-                ),
-                Box::new(
-                    Decimal::from_str_radix(self.data.strip_prefix("0x").unwrap(), 16).unwrap(),
-                ),
-                Box::new(self.topics[0].strip_prefix("0x").unwrap().to_owned()),
-                Box::new(self.topics[1].strip_prefix("0x").unwrap().to_owned()),
-                Box::new(self.topics[2].strip_prefix("0x").unwrap().to_owned()),
-                Box::new(self.transaction_hash.strip_prefix("0x").unwrap().to_owned()),
-                Box::new(
-                    i32::from_str_radix(&self.transaction_index.strip_prefix("0x").unwrap(), 16)
-                        .unwrap(),
-                ),
-            ],
-        )
+        let mut fields = vec![
+            "address",
+            "block_hash",
+            "block_number",
+            "data",
+            "transaction_hash",
+            "transaction_index",
+        ];
+        let mut topic_fields = vec![];
+        for topic_num in 0..self.topics.len() {
+            topic_fields.push(format!("topic{}", topic_num))
+        }
+        fields.append(&mut topic_fields.iter().map(|f| f.as_str()).collect());
+        log::info!("sql data {:?}", self.data);
+
+        let mut values: Vec<Box<dyn ToSql + Sync>> = vec![
+            Box::new(self.address.strip_prefix("0x").unwrap().to_owned()),
+            Box::new(self.block_hash.strip_prefix("0x").unwrap().to_owned()),
+            Box::new(
+                i32::from_str_radix(&self.block_number.strip_prefix("0x").unwrap(), 16).unwrap(),
+            ),
+            Box::new(self.data.strip_prefix("0x").unwrap().to_owned()),
+            Box::new(self.transaction_hash.strip_prefix("0x").unwrap().to_owned()),
+            Box::new(
+                i32::from_str_radix(&self.transaction_index.strip_prefix("0x").unwrap(), 16)
+                    .unwrap(),
+            ),
+        ];
+        for topic_num in 0..self.topics.len() {
+            values.push(Box::new(
+                self.topics[topic_num]
+                    .strip_prefix("0x")
+                    .unwrap()
+                    .to_owned(),
+            ));
+        }
+        <dyn crate::Ops>::upsert_sql("logs", vec![], fields, values)
     }
 }
 
