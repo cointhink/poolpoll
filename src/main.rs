@@ -71,8 +71,6 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                 .iter()
                 .filter(uniswap::v2::topic_filter_swap)
                 .collect::<Vec<&InfuraLog>>();
-            // mark block as visited
-            db.insert(block.to_upsert_sql());
             log::info!(
                 "block #{} {} logs. {} erc20 transfer logs. {} uniswap swap logs",
                 fetch_block_number,
@@ -94,6 +92,8 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                     create_pool(geth, db, &abi_pool, log_address);
                 }
             }
+            // mark block as visited
+            db.insert(block.to_upsert_sql());
             if geth_block_number == fetch_block_number {
                 // are we caught up?
                 log::info!("sleeping 5 sec at block {}", db_block_number);
