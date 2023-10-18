@@ -71,12 +71,6 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                 .iter()
                 .filter(uniswap::v2::topic_filter_swap)
                 .collect::<Vec<&InfuraLog>>();
-            if geth_block_number == fetch_block_number {
-                log::info!("sleeping 5 sec at block {}", db_block_number);
-                thread::sleep(Duration::from_secs(5));
-                log::info!("updating block number");
-                geth_block_number = geth.last_block_number();
-            }
             // mark block as visited
             db.insert(block.to_upsert_sql());
             log::info!(
@@ -92,14 +86,20 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                 let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
                 let rows = db.q(sql);
                 if rows.len() > 0 {
-                    let pool = uniswap::v2::Pool::from(&rows[0]);
-                    log::info!("known pool {:?}", pool);
+                    //let pool = uniswap::v2::Pool::from(&rows[0]);
                 } else {
                     let log_address = Address::from_slice(
                         &hex::decode(log.address.strip_prefix("0x").unwrap()).unwrap(),
                     );
                     create_pool(geth, db, &abi_pool, log_address);
                 }
+            }
+            if geth_block_number == fetch_block_number {
+                // are we caught up?
+                log::info!("sleeping 5 sec at block {}", db_block_number);
+                thread::sleep(Duration::from_secs(5)); // then sleep
+                log::info!("updating block number");
+                geth_block_number = geth.last_block_number();
             }
         }
     }
@@ -142,7 +142,7 @@ fn create_pool(
     refresh_token(&geth, sql, tokens.0);
     refresh_token(&geth, sql, tokens.1);
 
-    log::info!("Uniswap v2 pool info #0 {:?}", pool);
+    log::info!("Created {:?}", pool);
     sql.insert(pool.to_upsert_sql());
 }
 
@@ -178,11 +178,10 @@ fn refresh_token(geth: &crate::geth::Client, sql: &mut crate::sql::Client, token
             decimals: token_decimals,
         };
         sql.insert(coin.to_upsert_sql());
+        log::info!("Created {:?}", coin);
         coin
     } else {
-        log::info!("hydrated from {} rows", rows.len());
         Coin::from(&rows[0])
     };
-    log::info!("coin {:?}", coin);
     coin
 }

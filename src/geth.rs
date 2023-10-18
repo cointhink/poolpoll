@@ -44,7 +44,7 @@ impl Client {
             Err(_) => Err(output_no_0x.into()),
             Ok(tokens) => {
                 println!(
-                    "geth {}({:?}) => {:?}",
+                    "geth call {}({:?}) => {:?}",
                     function_name, function_params, tokens
                 );
                 Ok(tokens)
