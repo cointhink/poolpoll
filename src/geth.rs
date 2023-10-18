@@ -282,6 +282,8 @@ pub struct InfuraBlock {
     pub hash: String,
     #[serde(deserialize_with = "hexstr_to_u32")]
     pub number: u32,
+    #[serde(deserialize_with = "hexstr_to_u32")]
+    pub timestamp: u32,
     pub transactions: Vec<InfuraTransaction>,
 }
 
@@ -303,10 +305,11 @@ impl crate::sql::Ops for InfuraBlock {
         <dyn crate::Ops>::upsert_sql(
             "blocks",
             vec!["number"],
-            vec!["hash"],
+            vec!["hash", "timestamp"],
             vec![
                 Box::new(self.number as i32),
                 Box::new(self.hash.strip_prefix("0x").unwrap().to_owned()),
+                Box::new(self.timestamp as i32),
             ],
         )
     }
