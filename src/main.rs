@@ -92,7 +92,12 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                     );
                     match create_pool(geth, db, &abi_pool, log_address) {
                         Ok(_) => (),
-                        Err(_) => log::info!("warning: pool creation {} failed", log_address),
+                        Err(_) => log::info!(
+                            "warning: block {} tx #{} pool creation {} failed",
+                            block.number,
+                            log.transaction_index,
+                            log_address
+                        ),
                     }
                 }
             }
