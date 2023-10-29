@@ -96,7 +96,7 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                             "warning: block {} tx #{} pool creation {} failed",
                             block.number,
                             log.transaction_index,
-                            log_address
+                            hex::encode(log_address),
                         ),
                     }
                 }
@@ -136,7 +136,7 @@ fn discover(geth: &geth::Client, sql: &mut sql::Client) {
             Ok(_) => (),
             Err(err) => log::info!(
                 "warning: pool creation {} failed: {}",
-                hex::encode(address.as_fixed_bytes()),
+                hex::encode(address),
                 err
             ),
         }
