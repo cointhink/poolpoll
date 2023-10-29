@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::thread;
 use std::time::Duration;
 
@@ -89,7 +90,7 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                     let log_address = Address::from_slice(
                         &hex::decode(log.address.strip_prefix("0x").unwrap()).unwrap(),
                     );
-                    create_pool(geth, db, &abi_pool, log_address);
+                    create_pool(geth, db, &abi_pool, log_address).unwrap();
                 }
             }
             // mark block as visited
@@ -123,7 +124,7 @@ fn discover(geth: &geth::Client, sql: &mut sql::Client) {
     let abi_pool = ethabi::Contract::load(abi_file).unwrap();
     for pool_idx in pool_count - 10..pool_count {
         let address = uniswap::v2::Factory::pool_addr(&geth, pool_idx).unwrap();
-        create_pool(geth, sql, &abi_pool, address);
+        create_pool(geth, sql, &abi_pool, address).unwrap();
     }
 }
 
@@ -132,8 +133,8 @@ fn create_pool(
     sql: &mut sql::Client,
     abi_pool: &ethabi::Contract,
     address: Address,
-) {
-    let tokens = crate::uniswap::v2::Pool::tokens(&geth, &abi_pool, &address).unwrap();
+) -> Result<uniswap::v2::Pool, Box<dyn Error>> {
+    let tokens = crate::uniswap::v2::Pool::tokens(&geth, &abi_pool, &address)?;
     let pool = uniswap::v2::Pool {
         contract_address: address,
         token0: tokens.0,
@@ -144,6 +145,7 @@ fn create_pool(
 
     log::info!("Created {:?}", pool);
     sql.insert(pool.to_upsert_sql());
+    Ok(pool)
 }
 
 fn update_pool_reserves(
