@@ -92,7 +92,7 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                     );
                     match create_pool(geth, db, &abi_pool, log_address) {
                         Ok(_) => (),
-                        Err(_) => (),
+                        Err(_) => log::info!("warning: pool creation {} failed", log_address),
                     }
                 }
             }
@@ -129,7 +129,7 @@ fn discover(geth: &geth::Client, sql: &mut sql::Client) {
         let address = uniswap::v2::Factory::pool_addr(&geth, pool_idx).unwrap();
         match create_pool(geth, sql, &abi_pool, address) {
             Ok(_) => (),
-            Err(_) => (),
+            Err(_) => log::info!("warning: pool creation {} failed", address),
         }
     }
 }
