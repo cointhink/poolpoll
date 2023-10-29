@@ -90,7 +90,10 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                     let log_address = Address::from_slice(
                         &hex::decode(log.address.strip_prefix("0x").unwrap()).unwrap(),
                     );
-                    create_pool(geth, db, &abi_pool, log_address).unwrap();
+                    match create_pool(geth, db, &abi_pool, log_address) {
+                        Ok(_) => (),
+                        Err(_) => (),
+                    }
                 }
             }
             // mark block as visited
@@ -124,7 +127,10 @@ fn discover(geth: &geth::Client, sql: &mut sql::Client) {
     let abi_pool = ethabi::Contract::load(abi_file).unwrap();
     for pool_idx in pool_count - 10..pool_count {
         let address = uniswap::v2::Factory::pool_addr(&geth, pool_idx).unwrap();
-        create_pool(geth, sql, &abi_pool, address).unwrap();
+        match create_pool(geth, sql, &abi_pool, address) {
+            Ok(_) => (),
+            Err(_) => (),
+        }
     }
 }
 
