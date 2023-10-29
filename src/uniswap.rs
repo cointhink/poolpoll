@@ -181,21 +181,21 @@ pub mod v2 {
             ABI.set(abi_factory).unwrap();
         }
 
-        pub(crate) fn pool_count(geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
-            let factory = Address::from_slice(&hex::decode(UNISWAP_FACTORY).unwrap());
-            let result = geth.eth_call(
-                &factory,
-                &ABI.get().unwrap(),
-                "allPairsLength",
-                &vec![],
-                None,
-            )?;
-            let Token::Uint(count) = result[0] else {
-                println!("{:?}", result[0]);
-                unreachable!()
-            };
-            return Ok(count);
-        }
+        // pub(crate) fn pool_count(geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
+        //     let factory = Address::from_slice(&hex::decode(UNISWAP_FACTORY).unwrap());
+        //     let result = geth.eth_call(
+        //         &factory,
+        //         &ABI.get().unwrap(),
+        //         "allPairsLength",
+        //         &vec![],
+        //         None,
+        //     )?;
+        //     let Token::Uint(count) = result[0] else {
+        //         println!("{:?}", result[0]);
+        //         unreachable!()
+        //     };
+        //     return Ok(count);
+        // }
 
         pub(crate) fn sql_pool_count(sql: &mut crate::sql::Client) -> u64 {
             let max_pool = sql_query_builder::Select::new()
