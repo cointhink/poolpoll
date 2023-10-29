@@ -1,7 +1,7 @@
 .PHONY: all
 
 all:
-	cargo run
+	cargo build
 
 discover:
 	cargo run -- discover
