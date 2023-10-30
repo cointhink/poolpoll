@@ -189,11 +189,9 @@ fn refresh_token(
     let rows = sql.q((exist.to_string(), vec![Box::new(format!("{:x}", address))]));
     if rows.len() == 0 {
         let token = Erc20 { address };
-        if let (Ok(name), Ok(symbol), Ok(decimals)) = (
-            token.name(&geth),
-            token.symbol(&geth),
-            token.decimals(&geth),
-        ) {
+        let name = token.name(&geth).unwrap();
+        let symbol = token.symbol(&geth).unwrap();
+        if let Ok(decimals) = token.decimals(&geth) {
             let coin = Coin {
                 contract_address: token.address,
                 name,
@@ -204,10 +202,7 @@ fn refresh_token(
             log::info!("Created {:?}", coin);
             Ok(coin)
         } else {
-            Err(Box::from(format!(
-                "coin detail fetch failed for {}",
-                address
-            )))
+            Err(Box::from(format!("coin decimals() failed for {}", address)))
         }
     } else {
         Ok(Coin::from(&rows[0]))
