@@ -35,21 +35,21 @@ impl Client {
         let function_call = abi.function(function_name).unwrap();
         let function_input = function_call.encode_input(function_params).unwrap();
         let to_hex = format!("0x{}", hex::encode(to));
-        let tx = tx_build(to_hex, function_input);
+        let tx = tx_build(to_hex.clone(), function_input);
         let params = (tx, infura_block_param(block_number));
         let output = self.rpc_str("eth_call", ParamTypes::Infura(params))?;
         let output_no_0x = output.strip_prefix("0x").unwrap();
         let output_bytes = hex::decode(output_no_0x).unwrap();
         match function_call.decode_output(&output_bytes) {
             Err(_) => Err(format!(
-                "error decoding output from {}({:?}): {}",
-                function_name, function_params, output_no_0x
+                "geth call {}({:?})@{} => Error decoding output {}",
+                function_name, function_params, to_hex, output_no_0x
             )
             .into()),
             Ok(tokens) => {
                 println!(
-                    "geth call {}({:?}) => {:?}",
-                    function_name, function_params, tokens
+                    "geth call {}({:?})@{} => {:?}",
+                    function_name, function_params, to_hex, tokens
                 );
                 Ok(tokens)
             }
