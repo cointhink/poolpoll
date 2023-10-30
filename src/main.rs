@@ -117,9 +117,10 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
 fn refresh(geth: &geth::Client, db: &mut sql::Client, eth_block: u32) {
     let sql = uniswap::v2::Pool::all();
     let rows = db.q(sql);
-    for row in rows {
-        let pool = uniswap::v2::Pool::from(&row);
-        log::info!("refresh: {:?}", pool);
+    let rows_count = rows.len();
+    for (idx, row) in rows.iter().enumerate() {
+        let pool = uniswap::v2::Pool::from(row);
+        log::info!("refresh: {}/{} {:?}", idx, rows_count, pool);
         update_pool_reserves(geth, db, &pool, eth_block);
     }
 }
