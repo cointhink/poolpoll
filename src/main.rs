@@ -127,7 +127,7 @@ fn refresh(geth: &geth::Client, db: &mut sql::Client, eth_block: u32) {
         log::info!("refresh: {}/{} {:?}", idx, rows_count, pool);
         match update_pool_reserves(geth, db, &pool, eth_block) {
             Ok(_) => (),
-            Err(_) => (),
+            Err(err) => log::info!("warning: pool reserves update failed. {}", err),
         };
     }
 }
