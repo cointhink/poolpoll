@@ -155,8 +155,8 @@ fn create_pool(
         token0: tokens.0,
         token1: tokens.1,
     };
-    refresh_token(&geth, sql, tokens.0);
-    refresh_token(&geth, sql, tokens.1);
+    refresh_token(&geth, sql, tokens.0)?;
+    refresh_token(&geth, sql, tokens.1)?;
 
     log::info!("Created {:?}", pool);
     sql.insert(pool.to_upsert_sql());
@@ -177,28 +177,39 @@ fn update_pool_reserves(
     sql.insert(pool_reserves.to_upsert_sql());
 }
 
-fn refresh_token(geth: &crate::geth::Client, sql: &mut crate::sql::Client, token: Address) -> Coin {
+fn refresh_token(
+    geth: &crate::geth::Client,
+    sql: &mut crate::sql::Client,
+    address: Address,
+) -> Result<Coin, Box<dyn Error>> {
     let exist = sql_query_builder::Select::new()
         .select("*")
         .from("coins")
         .where_clause("contract_address = $1");
-    let rows = sql.q((exist.to_string(), vec![Box::new(format!("{:x}", token))]));
-    let coin = if rows.len() == 0 {
-        let token = Erc20 { address: token };
-        let token_name = token.name(&geth).unwrap();
-        let token_symbol = token.symbol(&geth).unwrap();
-        let token_decimals = token.decimals(&geth).unwrap();
-        let coin = Coin {
-            contract_address: token.address,
-            name: token_name,
-            symbol: token_symbol,
-            decimals: token_decimals,
-        };
-        sql.insert(coin.to_upsert_sql());
-        log::info!("Created {:?}", coin);
-        coin
+    let rows = sql.q((exist.to_string(), vec![Box::new(format!("{:x}", address))]));
+    if rows.len() == 0 {
+        let token = Erc20 { address };
+        if let (Ok(name), Ok(symbol), Ok(decimals)) = (
+            token.name(&geth),
+            token.symbol(&geth),
+            token.decimals(&geth),
+        ) {
+            let coin = Coin {
+                contract_address: token.address,
+                name,
+                symbol,
+                decimals,
+            };
+            sql.insert(coin.to_upsert_sql());
+            log::info!("Created {:?}", coin);
+            Ok(coin)
+        } else {
+            Err(Box::from(format!(
+                "coin detail fetch failed for {}",
+                address
+            )))
+        }
     } else {
-        Coin::from(&rows[0])
-    };
-    coin
+        Ok(Coin::from(&rows[0]))
+    }
 }
