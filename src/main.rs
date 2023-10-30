@@ -91,7 +91,11 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                         &hex::decode(log.address.strip_prefix("0x").unwrap()).unwrap(),
                     );
                     match create_pool(geth, db, &abi_pool, log_address) {
-                        Ok(pool) => update_pool_reserves(geth, db, &pool, fetch_block_number),
+                        Ok(pool) => match update_pool_reserves(geth, db, &pool, fetch_block_number)
+                        {
+                            Ok(_) => (),
+                            Err(err) => log::info!("warning: pool reserves update failed. {}", err),
+                        },
                         Err(_) => log::info!(
                             "warning: block {} tx #{} pool creation {} failed",
                             block.number,
@@ -121,7 +125,10 @@ fn refresh(geth: &geth::Client, db: &mut sql::Client, eth_block: u32) {
     for (idx, row) in rows.iter().enumerate() {
         let pool = uniswap::v2::Pool::from(row);
         log::info!("refresh: {}/{} {:?}", idx, rows_count, pool);
-        update_pool_reserves(geth, db, &pool, eth_block);
+        match update_pool_reserves(geth, db, &pool, eth_block) {
+            Ok(_) => (),
+            Err(_) => (),
+        };
     }
 }
 
@@ -164,18 +171,19 @@ fn create_pool(
     Ok(pool)
 }
 
-fn update_pool_reserves(
+fn update_pool_reserves<'a>(
     geth: &geth::Client,
     sql: &mut sql::Client,
-    pool: &uniswap::v2::Pool,
+    pool: &'a uniswap::v2::Pool,
     eth_block: u32,
-) {
+) -> Result<uniswap::v2::Reserves<'a>, Box<dyn Error>> {
     let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
     let abi_pool = ethabi::Contract::load(abi_file).unwrap();
     let reserves =
-        uniswap::v2::Pool::reserves(&geth, &abi_pool, &pool.contract_address, eth_block).unwrap();
+        uniswap::v2::Pool::reserves(&geth, &abi_pool, &pool.contract_address, eth_block)?;
     let pool_reserves = uniswap::v2::Reserves::new(&pool, eth_block, reserves);
     sql.insert(pool_reserves.to_upsert_sql());
+    Ok(pool_reserves)
 }
 
 fn refresh_token(
