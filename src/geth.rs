@@ -41,7 +41,11 @@ impl Client {
         let output_no_0x = output.strip_prefix("0x").unwrap();
         let output_bytes = hex::decode(output_no_0x).unwrap();
         match function_call.decode_output(&output_bytes) {
-            Err(_) => Err(output_no_0x.into()),
+            Err(_) => Err(format!(
+                "error decoding output from {}({:?}): {}",
+                function_name, function_params, output_no_0x
+            )
+            .into()),
             Ok(tokens) => {
                 println!(
                     "geth call {}({:?}) => {:?}",
