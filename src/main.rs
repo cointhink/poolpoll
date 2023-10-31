@@ -47,6 +47,7 @@ fn main() {
 fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u32) {
     let mut geth_block_number = last_block_number;
     loop {
+        let started = std::time::Instant::now();
         let db_block_number = match InfuraBlock::last_block_number(&mut db) {
             Some(number) => number,
             None => last_block_number - (60 / 12 * 60 * 24), // 1 day in eth blocks
@@ -107,6 +108,7 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
             }
             // mark block as visited
             db.insert(block.to_upsert_sql());
+            log::info!("{} seconds", started.elapsed().as_secs());
             if geth_block_number == fetch_block_number {
                 // are we caught up?
                 log::info!("sleeping 5 sec at block {}", db_block_number);
