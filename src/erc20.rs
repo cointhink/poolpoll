@@ -55,22 +55,27 @@ impl Erc20 {
 }
 
 pub fn topic_filter_transfer(log: &&InfuraLog) -> bool {
-    if log.topics[0] == TOPIC_TRANSFER && log.data.len() > 2 {
-        if log.topics.len() == 3 {
-            // log::info!(
-            //     "swap from {} to {} value {} ",
-            //     log.topics[1],
-            //     log.topics[2],
-            //     ethereum_types::U256::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16)
-            //         .unwrap(),
-            // );
-            true
+    let topics = &log.topics;
+    if topics.len() > 0 {
+        if topics[0] == TOPIC_TRANSFER && log.data.len() > 2 {
+            if topics.len() == 3 {
+                // log::info!(
+                //     "swap from {} to {} value {} ",
+                //     log.topics[1],
+                //     log.topics[2],
+                //     ethereum_types::U256::from_str_radix(log.data.strip_prefix("0x").unwrap(), 16)
+                //         .unwrap(),
+                // );
+                true
+            } else {
+                log::info!(
+                    "warning: log is swap but only {} topics {:?}",
+                    topics.len(),
+                    log
+                );
+                false
+            }
         } else {
-            log::info!(
-                "warning: log is swap but only {} topics {:?}",
-                log.topics.len(),
-                log
-            );
             false
         }
     } else {
