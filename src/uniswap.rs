@@ -226,10 +226,22 @@ pub mod v2 {
             return Ok(addr);
         }
     }
+
+    const TOPIC_SWAP: &str = "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822";
     pub fn topic_filter_swap(log: &&InfuraLog) -> bool {
         // Swap (index_topic_1 address sender, uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out, index_topic_2 address to)
-        const TOPIC_SWAP: &str =
-            "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822";
         log.topics.len() > 0 && log.topics[0] == TOPIC_SWAP
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_topic_filter_swap() {
+            let mut log = InfuraLog::default();
+            log.topics.push(TOPIC_SWAP.to_string());
+            assert!(topic_filter_swap(&&log))
+        }
     }
 }

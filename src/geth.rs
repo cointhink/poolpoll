@@ -216,7 +216,7 @@ pub enum ResultTypes {
     Null,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct InfuraLog {
     pub address: String,
