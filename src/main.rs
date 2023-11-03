@@ -61,53 +61,20 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                 db_block_number
             );
             let block = geth.block(fetch_block_number);
-            let logs = geth.logs(fetch_block_number);
-            for log in &logs {
-                db.insert(log.to_upsert_sql())
-            }
-            let erc20_transfer_logs = logs
-                .iter()
-                .filter(erc20::topic_filter_transfer)
-                .collect::<Vec<&InfuraLog>>();
-            let uniswap_swap_logs = logs
-                .iter()
-                .filter(uniswap::v2::topic_filter_swap)
-                .collect::<Vec<&InfuraLog>>();
-            log::info!(
-                "block #{} {} logs. {} erc20 transfer logs. {} uniswap swap logs",
-                fetch_block_number,
-                logs.len(),
-                erc20_transfer_logs.len(),
-                uniswap_swap_logs.len()
-            );
-            let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
-            let abi_pool = ethabi::Contract::load(abi_file).unwrap();
-            for log in uniswap_swap_logs {
-                let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
-                let rows = db.q(sql);
-                if rows.len() > 0 {
-                    //let pool = uniswap::v2::Pool::from(&rows[0]);
-                } else {
-                    let log_address = Address::from_slice(
-                        &hex::decode(log.address.strip_prefix("0x").unwrap()).unwrap(),
-                    );
-                    match create_pool(geth, db, &abi_pool, log_address) {
-                        Ok(pool) => match update_pool_reserves(geth, db, &pool, fetch_block_number)
-                        {
-                            Ok(_) => (),
-                            Err(err) => log::info!("warning: pool reserves update failed. {}", err),
-                        },
-                        Err(_) => log::info!(
-                            "warning: block {} tx #{} pool creation {} failed",
-                            block.number,
-                            log.transaction_index,
-                            hex::encode(log_address),
-                        ),
+            match geth.logs(fetch_block_number) {
+                Ok(logs) => match process_logs(geth, db, fetch_block_number, logs) {
+                    Ok(_) => {
+                        // mark block as visited
+                        db.insert(block.to_upsert_sql());
+                    }
+                    Err(_) => {}
+                },
+                Err(e) => {
+                    log::info!("block {} not updated: {:?}", fetch_block_number, e);
+                    if e.error.code == -32603 { // network
                     }
                 }
             }
-            // mark block as visited
-            db.insert(block.to_upsert_sql());
             log::info!("{} seconds", started.elapsed().as_secs());
             if geth_block_number == fetch_block_number {
                 // are we caught up?
@@ -118,6 +85,59 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
             }
         }
     }
+}
+
+fn process_logs(
+    geth: &geth::Client,
+    db: &mut sql::Client,
+    fetch_block_number: u32,
+    logs: Vec<InfuraLog>,
+) -> Result<(), Box<dyn Error>> {
+    for log in &logs {
+        db.insert(log.to_upsert_sql())
+    }
+    let erc20_transfer_logs = logs
+        .iter()
+        .filter(erc20::topic_filter_transfer)
+        .collect::<Vec<&InfuraLog>>();
+    let uniswap_swap_logs = logs
+        .iter()
+        .filter(uniswap::v2::topic_filter_swap)
+        .collect::<Vec<&InfuraLog>>();
+    log::info!(
+        "block #{} {} logs. {} erc20 transfer logs. {} uniswap swap logs",
+        fetch_block_number,
+        logs.len(),
+        erc20_transfer_logs.len(),
+        uniswap_swap_logs.len()
+    );
+    let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
+    let abi_pool = ethabi::Contract::load(abi_file).unwrap();
+    for log in uniswap_swap_logs {
+        let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
+        let rows = db.q(sql);
+        if rows.len() > 0 {
+            //let pool = uniswap::v2::Pool::from(&rows[0]);
+        } else {
+            let log_address =
+                Address::from_slice(&hex::decode(log.address.strip_prefix("0x").unwrap()).unwrap());
+            match create_pool(geth, db, &abi_pool, log_address) {
+                Ok(pool) => {
+                    update_pool_reserves(geth, db, &pool, fetch_block_number)?;
+                    ()
+                }
+                Err(_) => {
+                    return Err(Box::from(format!(
+                        "warning: block {} tx #{} pool creation {} failed",
+                        fetch_block_number,
+                        log.transaction_index,
+                        hex::encode(log_address),
+                    )))
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn refresh(geth: &geth::Client, db: &mut sql::Client, eth_block: u32) {

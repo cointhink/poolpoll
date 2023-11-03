@@ -101,7 +101,7 @@ impl Client {
         }
     }
 
-    pub fn logs(&self, block_number: u32) -> Vec<InfuraLog> {
+    pub fn logs(&self, block_number: u32) -> Result<Vec<InfuraLog>, ErrorRpc> {
         let infura_block_number = infura_block_param(Some(block_number));
         let mut rpc_param = JsonRpcParam::new();
         rpc_param.insert("fromBlock".to_owned(), infura_block_number.clone());
@@ -113,15 +113,12 @@ impl Client {
         {
             RpcResultTypes::Result(r) => {
                 if let ResultTypes::Logs(logs) = r.result {
-                    logs
+                    Ok(logs)
                 } else {
                     todo!()
                 }
             }
-            RpcResultTypes::Error(e) => {
-                log::info!("{:?}", e);
-                todo!()
-            }
+            RpcResultTypes::Error(e) => return Err(e),
         }
     }
 
