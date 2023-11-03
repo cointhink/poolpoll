@@ -18,7 +18,8 @@ pub struct Erc20 {
 }
 
 fn hex_to_ascii(str: &str) -> String {
-    let utf8_bytes_null = hex::decode(str.to_string()).unwrap();
+    let utf8_bytes_null =
+        hex::decode(str.to_string()).expect(&format!("hex::decode err: {:?}", str));
     let pos0 = utf8_bytes_null.iter().position(|&r| r == 0).unwrap_or(0);
     std::str::from_utf8(&utf8_bytes_null[0..pos0])
         .unwrap()
