@@ -200,8 +200,8 @@ fn refresh_token(
     let rows = sql.q((exist.to_string(), vec![Box::new(format!("{:x}", address))]));
     if rows.len() == 0 {
         let token = Erc20 { address };
-        let name = token.name(&geth).unwrap();
-        let symbol = token.symbol(&geth).unwrap();
+        let name = token.name(&geth).unwrap_or_default();
+        let symbol = token.symbol(&geth).unwrap_or_default();
         if let Ok(decimals) = token.decimals(&geth) {
             let coin = Coin {
                 contract_address: token.address,
