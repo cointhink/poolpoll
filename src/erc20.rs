@@ -30,13 +30,13 @@ impl Erc20 {
     pub fn name(&self, geth: &Client) -> Result<String, Box<dyn std::error::Error>> {
         match geth.eth_call(&self.address, &ABI.get().unwrap(), "name", &vec![], None) {
             Ok(tokens) => Ok(tokens[0].to_string()),
-            Err(e) => Ok(hex_to_ascii(&e.to_string())),
+            Err(e) => Err(e),
         }
     }
     pub fn symbol(&self, geth: &Client) -> Result<String, Box<dyn std::error::Error>> {
         match geth.eth_call(&self.address, &ABI.get().unwrap(), "symbol", &vec![], None) {
             Ok(tokens) => Ok(tokens[0].to_string()),
-            Err(e) => Ok(hex_to_ascii(&e.to_string())),
+            Err(e) => Err(e),
         }
     }
     pub fn decimals(&self, geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
