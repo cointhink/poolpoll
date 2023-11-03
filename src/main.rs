@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::coin::Coin;
 use crate::erc20::Erc20;
@@ -54,13 +54,20 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
         };
         if db_block_number < geth_block_number {
             let fetch_block_number = db_block_number + 1;
+            let block = geth.block(fetch_block_number);
+            let block_fetch_delay = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+                - (block.timestamp as u64);
             log::info!(
-                "fetching block {} geth_block_number {} db_block_number {}",
+                "fetching block #{}. geth_block_number #{}. db_block_number #{}. {} blocks behind. {} secs fetch delay",
                 fetch_block_number,
                 geth_block_number,
-                db_block_number
+                db_block_number,
+                geth_block_number - db_block_number,
+                block_fetch_delay
             );
-            let block = geth.block(fetch_block_number);
             match geth.logs(fetch_block_number) {
                 Ok(logs) => match process_logs(geth, db, fetch_block_number, logs) {
                     Ok(_) => {
