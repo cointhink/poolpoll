@@ -21,3 +21,9 @@ begin
 end
 $function$;
 
+
+CREATE OR REPLACE FUNCTION string_nchars(text, integer) RETURNS setof text AS $$
+SELECT substring($1 from n for $2) FROM generate_series(1, length($1), $2) n;
+$$ LANGUAGE sql IMMUTABLE;
+
+
