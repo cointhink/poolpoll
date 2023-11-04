@@ -80,7 +80,7 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                         db.insert(block.to_upsert_sql());
                     }
                     Err(e) => {
-                        log::info!("block {} processing failed: {:?}", fetch_block_number, e);
+                        log::info!("block {} processing failed: {}", fetch_block_number, e);
                     }
                 },
                 Err(e) => {
@@ -140,13 +140,14 @@ fn process_logs(
                     ()
                 }
                 Err(e) => {
-                    return Err(Box::from(format!(
+                    log::info!(
                         "warning: block {} tx #{} pool creation {} failed: {}",
                         fetch_block_number,
                         log.transaction_index,
                         hex::encode(log_address),
                         e
-                    )))
+                    );
+                    ()
                 }
             }
         }
