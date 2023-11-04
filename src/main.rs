@@ -139,12 +139,13 @@ fn process_logs(
                     update_pool_reserves(geth, db, &pool, fetch_block_number)?;
                     ()
                 }
-                Err(_) => {
+                Err(e) => {
                     return Err(Box::from(format!(
-                        "warning: block {} tx #{} pool creation {} failed",
+                        "warning: block {} tx #{} pool creation {} failed: {}",
                         fetch_block_number,
                         log.transaction_index,
                         hex::encode(log_address),
+                        e
                     )))
                 }
             }
