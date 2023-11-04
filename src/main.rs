@@ -50,7 +50,7 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
         let started = std::time::Instant::now();
         let db_block_number = match InfuraBlock::last_block_number(&mut db) {
             Some(number) => number,
-            None => last_block_number - (60 / 12 * 60 * 24), // 1 day in eth blocks
+            None => last_block_number - (60 / 12 * 60 * 24), // start 1 day in eth blocks ago
         };
         if db_block_number < geth_block_number {
             let fetch_block_number = db_block_number + 1;
@@ -71,18 +71,24 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
             match geth.logs(fetch_block_number) {
                 Ok(logs) => match process_logs(geth, db, fetch_block_number, logs) {
                     Ok(_) => {
+                        log::info!(
+                            "block #{} processed in {} seconds",
+                            fetch_block_number,
+                            started.elapsed().as_secs()
+                        );
                         // mark block as visited
                         db.insert(block.to_upsert_sql());
                     }
-                    Err(_) => {}
+                    Err(e) => {
+                        log::info!("block {} processing failed: {:?}", fetch_block_number, e);
+                    }
                 },
                 Err(e) => {
-                    log::info!("block {} not updated: {:?}", fetch_block_number, e);
+                    log::info!("block {} fetch failed: {:?}", fetch_block_number, e);
                     if e.error.code == -32603 { // network
                     }
                 }
             }
-            log::info!("{} seconds", started.elapsed().as_secs());
             if geth_block_number == fetch_block_number {
                 // are we caught up?
                 log::info!("sleeping 5 sec at block {}", db_block_number);
