@@ -37,11 +37,11 @@ $$ LANGUAGE SQL;
 
 CREATE OR REPLACE FUNCTION out0(logs)
 RETURNS numeric AS $$
-  select bytea2numeric(decode(substring($1.data from 128 for 64),'hex'))
+  select bytea2numeric(decode(substring($1.data from 129 for 64),'hex'))
 $$ LANGUAGE SQL;
 
 CREATE OR REPLACE FUNCTION out1(logs)
 RETURNS numeric AS $$
-  select bytea2numeric(decode(substring($1.data from 192 for 64),'hex'))
+  select bytea2numeric(decode(substring($1.data from 193 for 64),'hex'))
 $$ LANGUAGE SQL;
 
