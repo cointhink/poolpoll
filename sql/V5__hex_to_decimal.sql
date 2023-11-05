@@ -24,3 +24,24 @@ BEGIN
     RETURN _b;
 END;
 $$ LANGUAGE PLPGSQL IMMUTABLE STRICT;
+
+CREATE OR REPLACE FUNCTION in0(logs)
+RETURNS numeric AS $$
+  select bytea2numeric(decode(substring($1.data from 1 for 64),'hex'))
+$$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION in1(logs)
+RETURNS numeric AS $$
+  select bytea2numeric(decode(substring($1.data from 65 for 64),'hex'))
+$$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION out0(logs)
+RETURNS numeric AS $$
+  select bytea2numeric(decode(substring($1.data from 128 for 64),'hex'))
+$$ LANGUAGE SQL;
+
+CREATE OR REPLACE FUNCTION out1(logs)
+RETURNS numeric AS $$
+  select bytea2numeric(decode(substring($1.data from 192 for 64),'hex'))
+$$ LANGUAGE SQL;
+
