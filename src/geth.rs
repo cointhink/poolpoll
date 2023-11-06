@@ -5,7 +5,7 @@ use ethereum_types::Address;
 use postgres::types::ToSql;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -133,7 +133,9 @@ impl Client {
             method: method.to_string(),
             params: params,
         };
-        let result = ureq::post(&self.url).send_json(&jrpc);
+        let result = ureq::post(&self.url)
+            .timeout(Duration::new(12, 0))
+            .send_json(&jrpc);
         match result {
             Ok(res) => {
                 let rpc_result = res.into_json::<JsonRpcResult>().unwrap();
