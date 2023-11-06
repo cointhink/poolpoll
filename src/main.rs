@@ -93,8 +93,9 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                 // are we caught up?
                 log::info!("sleeping 5 sec at block {}", db_block_number);
                 thread::sleep(Duration::from_secs(5)); // then sleep
-                log::info!("updating block number");
+                log::info!("updating eth block number");
                 geth_block_number = geth.last_block_number();
+                log::info!("eth chain is at #{}", geth_block_number);
             }
         }
     }
