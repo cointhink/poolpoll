@@ -62,7 +62,7 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                 .as_secs()
                 - (block.timestamp as u64);
             log::info!(
-                "fetching logs for #{}. geth_block_number #{}. db_block_number #{}. {} blocks behind. {} fetch delay",
+                "fetching logs for #{}. geth_block_number #{}. db_block_number #{}. {} blocks / {} behind",
                 fetch_block_number,
                 geth_block_number,
                 db_block_number,
