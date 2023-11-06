@@ -54,6 +54,7 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
         };
         if db_block_number < geth_block_number {
             let fetch_block_number = db_block_number + 1;
+            log::info!("fetching block #{}", fetch_block_number);
             let block = geth.block(fetch_block_number);
             let block_fetch_delay = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
