@@ -61,12 +61,12 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                 .as_secs()
                 - (block.timestamp as u64);
             log::info!(
-                "fetching block #{}. geth_block_number #{}. db_block_number #{}. {} blocks behind. {} secs fetch delay",
+                "fetching block #{}. geth_block_number #{}. db_block_number #{}. {} blocks behind. {} fetch delay",
                 fetch_block_number,
                 geth_block_number,
                 db_block_number,
                 geth_block_number - db_block_number,
-                block_fetch_delay
+                elapsed_in_words(block_fetch_delay)
             );
             match geth.logs(fetch_block_number) {
                 Ok(logs) => match process_logs(geth, db, fetch_block_number, logs) {
@@ -260,4 +260,26 @@ fn refresh_token(
     } else {
         Ok(Coin::from(&rows[0]))
     }
+}
+
+fn elapsed_in_words(secs: u64) -> String {
+    let mut secs = secs;
+    let mut msg = "".to_string();
+    if secs > 60 * 60 * 24 {
+        let days = secs / 60 / 60 / 24;
+        msg.push_str(&format!("{} days ", days));
+        secs = secs - days * 60 * 60 * 24;
+    }
+    if secs > 60 * 60 {
+        let hours = secs / 60 / 60;
+        msg.push_str(&format!("{} hours ", hours));
+        secs = secs - hours * 60 * 60;
+    }
+    if secs > 60 {
+        let mins = secs / 60;
+        msg.push_str(&format!("{} mins ", mins));
+        secs = secs - mins * 60;
+    }
+    msg.push_str(&format!("{} secs", secs));
+    return msg;
 }
