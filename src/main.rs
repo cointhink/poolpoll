@@ -48,10 +48,12 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
     let mut geth_block_number = last_block_number;
     loop {
         let started = std::time::Instant::now();
+        log::info!("loop top. started {:?}. checking last db block", started);
         let db_block_number = match InfuraBlock::last_block_number(&mut db) {
             Some(number) => number,
             None => last_block_number - (60 / 12 * 60 * 24), // start 1 day in eth blocks ago
         };
+        log::info!("db block #{}", db_block_number);
         if db_block_number < geth_block_number {
             let fetch_block_number = db_block_number + 1;
             log::info!("fetching block #{}", fetch_block_number);
