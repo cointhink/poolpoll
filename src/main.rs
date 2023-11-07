@@ -96,11 +96,11 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
             geth_block_number = geth.last_block_number();
             if db_block_number == geth_block_number {
                 log::info!(
-                    "sleeping 5 sec at db #{} eth #{}",
+                    "sleeping 8 sec at db #{} eth #{}",
                     db_block_number,
                     geth_block_number
                 );
-                thread::sleep(Duration::from_secs(5)); // then sleep
+                thread::sleep(Duration::from_secs(8)); // then sleep
             }
         }
     }
