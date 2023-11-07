@@ -48,15 +48,12 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
     let mut geth_block_number = last_block_number;
     loop {
         let started = std::time::Instant::now();
-        log::info!("loop top. started {:?}. checking last db block", started);
         let db_block_number = match InfuraBlock::last_block_number(&mut db) {
             Some(number) => number,
             None => last_block_number - (60 / 12 * 60 * 24), // start 1 day in eth blocks ago
         };
-        log::info!("db block #{}", db_block_number);
         if db_block_number < geth_block_number {
             let fetch_block_number = db_block_number + 1;
-            log::info!("fetching block #{}", fetch_block_number);
             let block = geth.block(fetch_block_number);
             let block_fetch_delay = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -95,15 +92,16 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
         }
         // are we caught up?
         if db_block_number == geth_block_number {
-            log::info!(
-                "sleeping 5 sec at db #{} eth #{}",
-                db_block_number,
-                geth_block_number
-            );
-            thread::sleep(Duration::from_secs(5)); // then sleep
             log::info!("updating eth block number");
             geth_block_number = geth.last_block_number();
-            log::info!("eth chain is at #{}", geth_block_number);
+            if db_block_number == geth_block_number {
+                log::info!(
+                    "sleeping 5 sec at db #{} eth #{}",
+                    db_block_number,
+                    geth_block_number
+                );
+                thread::sleep(Duration::from_secs(5)); // then sleep
+            }
         }
     }
 }
