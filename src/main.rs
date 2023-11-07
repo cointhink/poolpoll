@@ -92,14 +92,18 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                     }
                 }
             }
-            if geth_block_number == fetch_block_number {
-                // are we caught up?
-                log::info!("sleeping 5 sec at block {}", db_block_number);
-                thread::sleep(Duration::from_secs(5)); // then sleep
-                log::info!("updating eth block number");
-                geth_block_number = geth.last_block_number();
-                log::info!("eth chain is at #{}", geth_block_number);
-            }
+        }
+        // are we caught up?
+        if db_block_number == geth_block_number {
+            log::info!(
+                "sleeping 5 sec at db #{} eth #{}",
+                db_block_number,
+                geth_block_number
+            );
+            thread::sleep(Duration::from_secs(5)); // then sleep
+            log::info!("updating eth block number");
+            geth_block_number = geth.last_block_number();
+            log::info!("eth chain is at #{}", geth_block_number);
         }
     }
 }
