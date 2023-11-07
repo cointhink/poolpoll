@@ -60,22 +60,17 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                 .unwrap()
                 .as_secs()
                 - (block.timestamp as u64);
-            log::info!(
-                "fetching logs for #{}. geth_block_number #{}. db_block_number #{}. {} blocks / {} behind",
-                fetch_block_number,
-                geth_block_number,
-                db_block_number,
-                geth_block_number - db_block_number,
-                elapsed_in_words(block_fetch_delay)
-            );
             match geth.logs(fetch_block_number) {
                 Ok(logs) => match process_logs(geth, db, fetch_block_number, logs) {
                     Ok(_) => {
                         log::info!(
-                            "block #{} processed in {} seconds",
-                            fetch_block_number,
-                            started.elapsed().as_secs()
-                        );
+                        "fetching logs for #{}. geth_block_number #{}. db_block_number #{}. {} blocks / {} behind. processed in {} seconds",
+                        fetch_block_number,
+                        geth_block_number,
+                        db_block_number,
+                        geth_block_number - db_block_number,
+                        elapsed_in_words(block_fetch_delay),
+                        started.elapsed().as_secs() );
                         // mark block as visited
                         db.insert(block.to_upsert_sql());
                     }
@@ -92,7 +87,6 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
         }
         // are we caught up?
         if db_block_number == geth_block_number {
-            log::info!("updating eth block number");
             geth_block_number = geth.last_block_number();
             if db_block_number == geth_block_number {
                 log::info!(
