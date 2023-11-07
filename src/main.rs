@@ -64,7 +64,7 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                 Ok(logs) => match process_logs(geth, db, fetch_block_number, logs) {
                     Ok(_) => {
                         log::info!(
-                            "processed {} seconds. db #{}. eth #{}. {} blocks / {} behind.",
+                            "processed in {} seconds. db #{}. eth #{}. {} blocks / {} behind.",
                             started.elapsed().as_secs(),
                             db_block_number,
                             geth_block_number,
