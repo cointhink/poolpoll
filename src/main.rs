@@ -64,13 +64,14 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                 Ok(logs) => match process_logs(geth, db, fetch_block_number, logs) {
                     Ok(_) => {
                         log::info!(
-                        "fetching logs for #{}. geth_block_number #{}. db_block_number #{}. {} blocks / {} behind. processed in {} seconds",
+                        "processed logs for #{} in {} seconds. geth_block_number #{}. db_block_number #{}. {} blocks / {} behind.",
                         fetch_block_number,
-                        geth_block_number,
+                        started.elapsed().as_secs(),
                         db_block_number,
+                        geth_block_number,
                         geth_block_number - db_block_number,
                         elapsed_in_words(block_fetch_delay),
-                        started.elapsed().as_secs() );
+                        );
                         // mark block as visited
                         db.insert(block.to_upsert_sql());
                     }
