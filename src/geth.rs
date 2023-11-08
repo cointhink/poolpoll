@@ -115,7 +115,7 @@ impl Client {
                 if let ResultTypes::Logs(logs) = r.result {
                     Ok(logs)
                 } else {
-                    todo!()
+                    panic!("Unexpected result type from eth_getLogs {:?}", r)
                 }
             }
             RpcResultTypes::Error(e) => return Err(e),
