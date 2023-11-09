@@ -137,8 +137,15 @@ fn process_logs(
     let abi_pool = ethabi::Contract::load(abi_file).unwrap();
     for log in uniswap_swap_logs {
         let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
-        if let Some(pool) = db.first(sql) {
-            log::info!("log swap pool {}", log.address.strip_prefix("0x").unwrap());
+        if let Some(_) = db.first(sql) {
+            log::info!(
+                "log swap pool {} in0 {} in1 {} out0 {} out1 {}",
+                log.address.strip_prefix("0x").unwrap(),
+                U256::from_str_radix(&log.data[2..66], 16).unwrap(),
+                U256::from_str_radix(&log.data[66..130], 16).unwrap(),
+                U256::from_str_radix(&log.data[130..194], 16).unwrap(),
+                U256::from_str_radix(&log.data[194..258], 16).unwrap(),
+            );
         }
     }
     for log in uniswap_sync_logs {
