@@ -144,13 +144,13 @@ fn process_logs(
             match create_pool(geth, db, &abi_pool, log_address) {
                 Ok(pool) => {
                     let reserves = (
-                        U256::from_str_radix(&log.data[0..14], 16).unwrap(),
-                        U256::from_str_radix(&log.data[14..28], 16).unwrap(),
+                        U256::from_str_radix(&log.data[2..66], 16).unwrap(),
+                        U256::from_str_radix(&log.data[66..130], 16).unwrap(),
                     );
                     log::info!(
                         "log sync pool {} reserves {:?}",
                         pool.contract_address,
-                        reserves
+                        reserves,
                     );
                     update_pool_reserves(db, &pool, fetch_block_number, reserves)?;
                     ()
