@@ -293,7 +293,7 @@ pub struct InfuraBlock {
 }
 
 impl InfuraBlock {
-    pub fn last_block_number(db: &mut crate::sql::Client) -> Option<u32> {
+    pub fn last_db_block_number(db: &mut crate::sql::Client) -> Option<u32> {
         let sql = Self::last_block_number_sql();
         match db.q_last(sql) {
             Some(row) => Some(row.get::<&str, i32>("number") as u32),
