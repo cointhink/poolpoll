@@ -135,37 +135,46 @@ fn process_logs(
     );
     let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
     let abi_pool = ethabi::Contract::load(abi_file).unwrap();
+    for log in uniswap_swap_logs {
+        let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
+        if let Some(pool) = db.first(sql) {
+            log::info!("log swap pool {}", log.address.strip_prefix("0x").unwrap());
+        }
+    }
     for log in uniswap_sync_logs {
         let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
-        if let Some(_) = db.first(sql) {
-        } else {
-            let log_address =
-                Address::from_slice(&hex::decode(log.address.strip_prefix("0x").unwrap()).unwrap());
-            match create_pool(geth, db, &abi_pool, log_address) {
-                Ok(pool) => {
-                    let reserves = (
-                        U256::from_str_radix(&log.data[2..66], 16).unwrap(),
-                        U256::from_str_radix(&log.data[66..130], 16).unwrap(),
-                    );
-                    log::info!(
-                        "log sync pool {} reserves {:?}",
-                        pool.contract_address,
-                        reserves,
-                    );
-                    update_pool_reserves(db, &pool, fetch_block_number, reserves)?;
-                    ()
-                }
-                Err(e) => {
-                    log::info!(
-                        "warning: block {} tx #{} pool creation {} failed: {}",
-                        fetch_block_number,
-                        log.transaction_index,
-                        hex::encode(log_address),
-                        e
-                    );
-                    ()
+        let pool = match db.first(sql) {
+            Some(pool_row) => Some(uniswap::v2::Pool::from(&pool_row)),
+            None => {
+                let log_address = Address::from_slice(
+                    &hex::decode(log.address.strip_prefix("0x").unwrap()).unwrap(),
+                );
+                match create_pool(geth, db, &abi_pool, log_address) {
+                    Ok(pool) => Some(pool),
+                    Err(e) => {
+                        log::info!(
+                            "warning: block {} tx #{} pool creation {} failed: {}",
+                            fetch_block_number,
+                            log.transaction_index,
+                            hex::encode(log_address),
+                            e
+                        );
+                        None
+                    }
                 }
             }
+        };
+        if let Some(pool) = pool {
+            let reserves = (
+                U256::from_str_radix(&log.data[2..66], 16).unwrap(),
+                U256::from_str_radix(&log.data[66..130], 16).unwrap(),
+            );
+            log::info!(
+                "log sync pool {} reserves {:?}",
+                hex::encode(pool.contract_address),
+                reserves,
+            );
+            update_pool_reserves(db, &pool, fetch_block_number, reserves)?;
         }
     }
     Ok(())
