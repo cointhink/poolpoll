@@ -119,14 +119,19 @@ fn process_logs(
         .collect::<Vec<&InfuraLog>>();
     let uniswap_swap_logs = logs
         .iter()
-        .filter(uniswap::v2::topic_filter_swap)
+        .filter(uniswap::v2::topic_filter(uniswap::v2::TOPIC_SWAP))
+        .collect::<Vec<&InfuraLog>>();
+    let uniswap_sync_logs = logs
+        .iter()
+        .filter(uniswap::v2::topic_filter(uniswap::v2::TOPIC_SYNC))
         .collect::<Vec<&InfuraLog>>();
     log::info!(
-        "block #{} {} logs. {} erc20 transfer logs. {} uniswap swap logs",
+        "block #{} {} logs. {} erc20 transfer logs. uniswap {} swaps {} syncs",
         fetch_block_number,
         logs.len(),
         erc20_transfer_logs.len(),
-        uniswap_swap_logs.len()
+        uniswap_swap_logs.len(),
+        uniswap_sync_logs.len()
     );
     let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
     let abi_pool = ethabi::Contract::load(abi_file).unwrap();
