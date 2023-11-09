@@ -55,11 +55,6 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
             let fetch_block_number = db_block_number + 1;
             match geth.block(fetch_block_number) {
                 Ok(block) => {
-                    let block_fetch_delay = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .unwrap()
-                        .as_secs()
-                        - (block.timestamp as u64);
                     match geth.logs(fetch_block_number) {
                         Ok(logs) => match process_logs(geth, db, fetch_block_number, logs) {
                             Ok(_) => {
@@ -69,7 +64,7 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                             db_block_number,
                             geth_block_number,
                             geth_block_number - db_block_number,
-                            elapsed_in_words(block_fetch_delay),
+                            elapsed_in_words(seconds_since_block(&block)),
                         );
                                 // mark block as visited
                                 db.insert(block.to_upsert_sql());
@@ -99,6 +94,14 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
             }
         }
     }
+}
+
+fn seconds_since_block(block: &InfuraBlock) -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
+        - (block.timestamp as u64)
 }
 
 fn process_logs(
