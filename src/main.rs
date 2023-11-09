@@ -110,79 +110,100 @@ fn process_logs(
     fetch_block_number: u32,
     logs: Vec<InfuraLog>,
 ) -> Result<(), Box<dyn Error>> {
-    for log in &logs {
-        db.insert(log.to_upsert_sql())
+    let mut topic_swap_count = 0;
+    let mut topic_sync_count = 0;
+    let mut topic_transfer_count = 0;
+    for (idx, log) in logs.iter().enumerate() {
+        db.insert(log.to_upsert_sql());
+        log::info!("#{} log {}/{}", fetch_block_number, idx, logs.len());
+        if log.topics.len() > 0 {
+            let _ = match log.topics[0].as_str() {
+                uniswap::v2::TOPIC_SWAP => {
+                    topic_swap_count += 1;
+                    process_swap(db, log)
+                }
+                uniswap::v2::TOPIC_SYNC => {
+                    topic_sync_count += 1;
+                    process_sync(geth, db, log, fetch_block_number)
+                }
+                erc20::TOPIC_TRANSFER => {
+                    topic_transfer_count += 1;
+                    Ok(())
+                }
+                _ => Ok(()),
+            };
+        }
     }
-    let erc20_transfer_logs = logs
-        .iter()
-        .filter(erc20::topic_filter_transfer)
-        .collect::<Vec<&InfuraLog>>();
-    let uniswap_swap_logs = logs
-        .iter()
-        .filter(uniswap::v2::topic_filter(uniswap::v2::TOPIC_SWAP))
-        .collect::<Vec<&InfuraLog>>();
-    let uniswap_sync_logs = logs
-        .iter()
-        .filter(uniswap::v2::topic_filter(uniswap::v2::TOPIC_SYNC))
-        .collect::<Vec<&InfuraLog>>();
     log::info!(
         "block #{} {} logs. {} erc20 transfer logs. uniswap {} swaps {} syncs",
         fetch_block_number,
         logs.len(),
-        erc20_transfer_logs.len(),
-        uniswap_swap_logs.len(),
-        uniswap_sync_logs.len()
+        topic_transfer_count,
+        topic_swap_count,
+        topic_sync_count,
     );
-    let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
-    let abi_pool = ethabi::Contract::load(abi_file).unwrap();
-    for log in uniswap_swap_logs {
-        let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
-        if let Some(_) = db.first(sql) {
-            log::info!(
-                "log swap pool {} in0 {} in1 {} out0 {} out1 {}",
-                log.address.strip_prefix("0x").unwrap(),
-                U256::from_str_radix(&log.data[2..66], 16).unwrap(),
-                U256::from_str_radix(&log.data[66..130], 16).unwrap(),
-                U256::from_str_radix(&log.data[130..194], 16).unwrap(),
-                U256::from_str_radix(&log.data[194..258], 16).unwrap(),
-            );
-        }
-    }
-    for log in uniswap_sync_logs {
-        let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
-        let pool = match db.first(sql) {
-            Some(pool_row) => Some(uniswap::v2::Pool::from(&pool_row)),
-            None => {
-                let log_address = Address::from_slice(
-                    &hex::decode(log.address.strip_prefix("0x").unwrap()).unwrap(),
-                );
-                match create_pool(geth, db, &abi_pool, log_address) {
-                    Ok(pool) => Some(pool),
-                    Err(e) => {
-                        log::info!(
-                            "warning: block {} tx #{} pool creation {} failed: {}",
-                            fetch_block_number,
-                            log.transaction_index,
-                            hex::encode(log_address),
-                            e
-                        );
-                        None
-                    }
+    Ok(())
+}
+
+fn process_sync(
+    geth: &geth::Client,
+    db: &mut sql::Client,
+    log: &InfuraLog,
+    fetch_block_number: u32,
+) -> Result<(), Box<dyn Error>> {
+    let pool = ensure_pool(geth, db, &log.address)?;
+    let reserves = (
+        U256::from_str_radix(&log.data[2..66], 16).unwrap(),
+        U256::from_str_radix(&log.data[66..130], 16).unwrap(),
+    );
+    log::info!(
+        "log sync pool {} reserves {:?}",
+        hex::encode(pool.contract_address),
+        reserves,
+    );
+    update_pool_reserves(db, &pool, fetch_block_number, reserves)?;
+    Ok(())
+}
+
+fn ensure_pool(
+    geth: &geth::Client,
+    db: &mut sql::Client,
+    address: &str,
+) -> Result<uniswap::v2::Pool, Box<dyn Error>> {
+    let sql = uniswap::v2::Pool::find_by_contract_address(address.into());
+    match db.first(sql) {
+        Some(pool_row) => Ok(uniswap::v2::Pool::from(&pool_row)),
+        None => {
+            let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
+            let abi_uniswap_pair = ethabi::Contract::load(abi_file).unwrap();
+            let log_address =
+                Address::from_slice(&hex::decode(address.strip_prefix("0x").unwrap()).unwrap());
+            match create_pool(geth, db, &abi_uniswap_pair, log_address) {
+                Ok(pool) => Ok(pool),
+                Err(e) => {
+                    log::info!(
+                        "warning: pool creation {} failed: {}",
+                        hex::encode(log_address),
+                        e
+                    );
+                    Err(Box::from(e))
                 }
             }
-        };
-        if let Some(pool) = pool {
-            let reserves = (
-                U256::from_str_radix(&log.data[2..66], 16).unwrap(),
-                U256::from_str_radix(&log.data[66..130], 16).unwrap(),
-            );
-            log::info!(
-                "log sync pool {} reserves {:?}",
-                hex::encode(pool.contract_address),
-                reserves,
-            );
-            update_pool_reserves(db, &pool, fetch_block_number, reserves)?;
         }
+    }
+}
+
+fn process_swap(db: &mut sql::Client, log: &InfuraLog) -> Result<(), Box<dyn Error>> {
+    let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
+    if let Some(_) = db.first(sql) {
+        log::info!(
+            "log swap pool {} in0 {} in1 {} out0 {} out1 {}",
+            log.address.strip_prefix("0x").unwrap(),
+            U256::from_str_radix(&log.data[2..66], 16).unwrap(),
+            U256::from_str_radix(&log.data[66..130], 16).unwrap(),
+            U256::from_str_radix(&log.data[130..194], 16).unwrap(),
+            U256::from_str_radix(&log.data[194..258], 16).unwrap(),
+        );
     }
     Ok(())
 }
