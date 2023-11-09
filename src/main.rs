@@ -6,7 +6,7 @@ use crate::coin::Coin;
 use crate::erc20::Erc20;
 use crate::geth::{InfuraBlock, InfuraLog};
 use crate::sql::Ops;
-use ethereum_types::Address;
+use ethereum_types::{Address, U256};
 
 mod coin;
 mod config;
@@ -70,11 +70,11 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                                 db.insert(block.to_upsert_sql());
                             }
                             Err(e) => {
-                                log::info!("block {} processing failed: {}", fetch_block_number, e);
+                                log::info!("block {} processing failed: {}", fetch_block_number, e)
                             }
                         },
                         Err(e) => {
-                            log::info!("block {} logs fetch failed: {:?}", fetch_block_number, e);
+                            log::info!("block {} logs fetch failed: {:?}", fetch_block_number, e)
                         }
                     }
                 }
@@ -135,17 +135,24 @@ fn process_logs(
     );
     let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
     let abi_pool = ethabi::Contract::load(abi_file).unwrap();
-    for log in uniswap_swap_logs {
+    for log in uniswap_sync_logs {
         let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
-        let rows = db.q(sql);
-        if rows.len() > 0 {
-            //let pool = uniswap::v2::Pool::from(&rows[0]);
+        if let Some(_) = db.first(sql) {
         } else {
             let log_address =
                 Address::from_slice(&hex::decode(log.address.strip_prefix("0x").unwrap()).unwrap());
             match create_pool(geth, db, &abi_pool, log_address) {
                 Ok(pool) => {
-                    update_pool_reserves(geth, db, &pool, fetch_block_number)?;
+                    let reserves = (
+                        U256::from_str_radix(&log.data[0..14], 16).unwrap(),
+                        U256::from_str_radix(&log.data[14..28], 16).unwrap(),
+                    );
+                    log::info!(
+                        "log sync pool {} reserves {:?}",
+                        pool.contract_address,
+                        reserves
+                    );
+                    update_pool_reserves(db, &pool, fetch_block_number, reserves)?;
                     ()
                 }
                 Err(e) => {
@@ -171,7 +178,12 @@ fn refresh(geth: &geth::Client, db: &mut sql::Client, eth_block: u32) {
     for (idx, row) in rows.iter().enumerate() {
         let pool = uniswap::v2::Pool::from(row);
         log::info!("refresh: {}/{} {:?}", idx, rows_count, pool);
-        match update_pool_reserves(geth, db, &pool, eth_block) {
+        let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
+        let abi_pool = ethabi::Contract::load(abi_file).unwrap();
+        let reserves =
+            uniswap::v2::Pool::reserves(&geth, &abi_pool, &pool.contract_address, eth_block)
+                .unwrap();
+        match update_pool_reserves(db, &pool, eth_block, reserves) {
             Ok(_) => (),
             Err(err) => log::info!("warning: pool reserves update failed. {}", err),
         };
@@ -209,8 +221,8 @@ fn create_pool(
         token0: tokens.0,
         token1: tokens.1,
     };
-    refresh_token(&geth, sql, tokens.0)?;
-    refresh_token(&geth, sql, tokens.1)?;
+    create_token(&geth, sql, tokens.0)?;
+    create_token(&geth, sql, tokens.1)?;
 
     log::info!("Created {:?}", pool);
     sql.insert(pool.to_upsert_sql());
@@ -218,21 +230,17 @@ fn create_pool(
 }
 
 fn update_pool_reserves<'a>(
-    geth: &geth::Client,
     sql: &mut sql::Client,
     pool: &'a uniswap::v2::Pool,
     eth_block: u32,
+    reserves: (U256, U256),
 ) -> Result<uniswap::v2::Reserves<'a>, Box<dyn Error>> {
-    let abi_file = std::fs::File::open("abi/uniswap_v2_pair.json").unwrap();
-    let abi_pool = ethabi::Contract::load(abi_file).unwrap();
-    let reserves =
-        uniswap::v2::Pool::reserves(&geth, &abi_pool, &pool.contract_address, eth_block)?;
     let pool_reserves = uniswap::v2::Reserves::new(&pool, eth_block, reserves);
     sql.insert(pool_reserves.to_upsert_sql());
     Ok(pool_reserves)
 }
 
-fn refresh_token(
+fn create_token(
     geth: &crate::geth::Client,
     sql: &mut crate::sql::Client,
     address: Address,

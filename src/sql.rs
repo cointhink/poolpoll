@@ -83,6 +83,15 @@ impl Client {
         self.client.query(&query.0, &params).unwrap()
     }
 
+    pub fn first(&mut self, query: SqlQuery) -> Option<postgres::Row> {
+        let mut rows = self.q(query);
+        if rows.len() > 0 {
+            Some(rows.remove(0))
+        } else {
+            None
+        }
+    }
+
     pub fn insert(&mut self, query: SqlQuery) {
         log::debug!("sql: {} {:?}", query.0, query.1);
         // expected `&[&dyn ToSql + Sync]`, found `&Vec<Box<dyn ToSql + Sync>>`
