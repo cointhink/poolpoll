@@ -54,16 +54,17 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
         };
         if db_block_number < geth_block_number {
             let fetch_block_number = db_block_number + 1;
-            let block = geth.block(fetch_block_number);
-            let block_fetch_delay = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs()
-                - (block.timestamp as u64);
-            match geth.logs(fetch_block_number) {
-                Ok(logs) => match process_logs(geth, db, fetch_block_number, logs) {
-                    Ok(_) => {
-                        log::info!(
+            match geth.block(fetch_block_number) {
+                Ok(block) => {
+                    let block_fetch_delay = SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs()
+                        - (block.timestamp as u64);
+                    match geth.logs(fetch_block_number) {
+                        Ok(logs) => match process_logs(geth, db, fetch_block_number, logs) {
+                            Ok(_) => {
+                                log::info!(
                             "processed in {} seconds. db #{}. eth #{}. {} blocks / {} behind.",
                             started.elapsed().as_secs(),
                             db_block_number,
@@ -71,18 +72,19 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                             geth_block_number - db_block_number,
                             elapsed_in_words(block_fetch_delay),
                         );
-                        // mark block as visited
-                        db.insert(block.to_upsert_sql());
-                    }
-                    Err(e) => {
-                        log::info!("block {} processing failed: {}", fetch_block_number, e);
-                    }
-                },
-                Err(e) => {
-                    log::info!("block {} fetch failed: {:?}", fetch_block_number, e);
-                    if e.error.code == -32603 { // network
+                                // mark block as visited
+                                db.insert(block.to_upsert_sql());
+                            }
+                            Err(e) => {
+                                log::info!("block {} processing failed: {}", fetch_block_number, e);
+                            }
+                        },
+                        Err(e) => {
+                            log::info!("block {} logs fetch failed: {:?}", fetch_block_number, e);
+                        }
                     }
                 }
+                Err(e) => log::info!("tail_from eth block get failed {:?}", e),
             }
         }
         // are we caught up?

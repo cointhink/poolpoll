@@ -82,26 +82,28 @@ impl Client {
         u32::from_str_radix(&blk_num_str[2..], 16).unwrap()
     }
 
-    pub fn block(&self, block_number: u32) -> InfuraBlock {
+    pub fn block(&self, block_number: u32) -> Result<InfuraBlock, Box<dyn std::error::Error>> {
         let infura_block_number = infura_block_param(Some(block_number));
         let params = (infura_block_number, true);
         match self
-            .rpc("eth_getBlockByNumber", ParamTypes::EthBlockByHash(params))
-            .unwrap()
+            .rpc("eth_getBlockByNumber", ParamTypes::EthBlockByHash(params))?
             .part
         {
-            RpcResultTypes::Result(r) => {
-                if let ResultTypes::Block(b) = r.result {
-                    b
+            RpcResultTypes::Result(result) => {
+                if let ResultTypes::Block(block) = result.result {
+                    Ok(block)
                 } else {
-                    todo!()
+                    Err(Box::from(format!(
+                        "geth.block: Unexpected result type {:?}",
+                        result
+                    )))
                 }
             }
             RpcResultTypes::Error(_) => todo!(),
         }
     }
 
-    pub fn logs(&self, block_number: u32) -> Result<Vec<InfuraLog>, ErrorRpc> {
+    pub fn logs(&self, block_number: u32) -> Result<Vec<InfuraLog>, Box<dyn std::error::Error>> {
         let infura_block_number = infura_block_param(Some(block_number));
         let mut rpc_param = JsonRpcParam::new();
         rpc_param.insert("fromBlock".to_owned(), infura_block_number.clone());
@@ -118,7 +120,7 @@ impl Client {
                     panic!("Unexpected result type from eth_getLogs {:?}", r)
                 }
             }
-            RpcResultTypes::Error(e) => return Err(e),
+            RpcResultTypes::Error(e) => return Err(Box::from(e.error.message)),
         }
     }
 
