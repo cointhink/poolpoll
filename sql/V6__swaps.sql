@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS swaps (
-  address VARCHAR(40),
+  pool_contract_address VARCHAR(40),
   block_number Int4,
   block_hash VARCHAR(64),
   transaction_index Int4,

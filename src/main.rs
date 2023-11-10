@@ -113,7 +113,7 @@ fn process_logs(
     let mut topic_swap_count = 0;
     let mut topic_sync_count = 0;
     let mut topic_transfer_count = 0;
-    for (idx, log) in logs.iter().enumerate() {
+    for log in &logs {
         db.insert(log.to_upsert_sql());
         if log.topics.len() > 0 {
             let _ = match log.topics[0].as_str() {
@@ -166,6 +166,47 @@ fn process_sync(
     Ok(())
 }
 
+fn process_swap(
+    db: &mut sql::Client,
+    log: &InfuraLog,
+    block_number: u32,
+) -> Result<(), Box<dyn Error>> {
+    let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
+    match db.first(sql) {
+        Some(row) => {
+            let in0 = U256::from_str_radix(&log.data[2..66], 16).unwrap();
+            let in1 = U256::from_str_radix(&log.data[66..130], 16).unwrap();
+            let out0 = U256::from_str_radix(&log.data[130..194], 16).unwrap();
+            let out1 = U256::from_str_radix(&log.data[194..258], 16).unwrap();
+            log::info!(
+                "#{} log swap pool {} tx {} in0 {} in1 {} out0 {} out1 {}",
+                block_number,
+                log.address.strip_prefix("0x").unwrap(),
+                log.transaction_index,
+                in0,
+                in1,
+                out0,
+                out1
+            );
+            let pool = uniswap::v2::Pool::from(&row);
+            let swap = uniswap::v2::Swap {
+                pool: &pool,
+                block_number: block_number as u128,
+                transaction_index: u128::from_str_radix(&log.transaction_index, 16).unwrap(),
+                in0,
+                in1,
+                out0,
+                out1,
+            };
+            db.insert(swap.to_upsert_sql());
+        }
+        None => {
+            log::warn!("process_swap could not find pool in db {}", log.address);
+        }
+    }
+    Ok(())
+}
+
 fn ensure_pool(
     geth: &geth::Client,
     db: &mut sql::Client,
@@ -182,40 +223,12 @@ fn ensure_pool(
             match create_pool(geth, db, &abi_uniswap_pair, log_address) {
                 Ok(pool) => Ok(pool),
                 Err(e) => {
-                    log::info!(
-                        "warning: pool creation {} failed: {}",
-                        hex::encode(log_address),
-                        e
-                    );
+                    log::warn!("pool creation {} failed: {}", hex::encode(log_address), e);
                     Err(Box::from(e))
                 }
             }
         }
     }
-}
-
-fn process_swap(
-    db: &mut sql::Client,
-    log: &InfuraLog,
-    block_number: u32,
-) -> Result<(), Box<dyn Error>> {
-    let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
-    match db.first(sql) {
-        Some(_row) => {
-            log::info!(
-                "#{} log swap pool {} tx {} in0 {} in1 {} out0 {} out1 {}",
-                block_number,
-                log.address.strip_prefix("0x").unwrap(),
-                log.transaction_index,
-                U256::from_str_radix(&log.data[2..66], 16).unwrap(),
-                U256::from_str_radix(&log.data[66..130], 16).unwrap(),
-                U256::from_str_radix(&log.data[130..194], 16).unwrap(),
-                U256::from_str_radix(&log.data[194..258], 16).unwrap(),
-            );
-        }
-        None => {}
-    }
-    Ok(())
 }
 
 fn refresh(geth: &geth::Client, db: &mut sql::Client, eth_block: u32) {

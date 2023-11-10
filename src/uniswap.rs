@@ -72,6 +72,17 @@ pub mod v2 {
         pub y: U256,
     }
 
+    #[derive(Debug)]
+    pub(crate) struct Swap<'a> {
+        pub pool: &'a Pool,
+        pub block_number: u128,
+        pub transaction_index: u128,
+        pub in0: U256,
+        pub in1: U256,
+        pub out0: U256,
+        pub out1: U256,
+    }
+
     impl Pool {
         pub fn tokens(
             geth: &Client,
@@ -132,6 +143,7 @@ pub mod v2 {
             }
         }
     }
+
     impl crate::sql::Ops for Reserves<'_> {
         fn to_upsert_sql(&self) -> crate::sql::SqlQuery {
             <dyn crate::Ops>::upsert_sql(
@@ -143,6 +155,25 @@ pub mod v2 {
                     Box::new(self.block_number as i32),
                     Box::new(format!("{}", self.x)),
                     Box::new(format!("{}", self.y)),
+                ],
+            )
+        }
+    }
+
+    impl crate::sql::Ops for Swap<'_> {
+        fn to_upsert_sql(&self) -> crate::sql::SqlQuery {
+            <dyn crate::Ops>::upsert_sql(
+                "swaps",
+                vec!["pool_contract_address", "block_number", "transaction_index"],
+                vec!["in0", "in1", "out0", "out1"],
+                vec![
+                    Box::new(format!("{:x}", self.pool.contract_address)),
+                    Box::new(self.block_number as i32),
+                    Box::new(self.transaction_index as i32),
+                    Box::new(format!("{}", self.in0)),
+                    Box::new(format!("{}", self.in1)),
+                    Box::new(format!("{}", self.out0)),
+                    Box::new(format!("{}", self.out1)),
                 ],
             )
         }

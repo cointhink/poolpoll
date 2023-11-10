@@ -1,4 +1,4 @@
-pub use log::info;
+pub use log::{info, warn};
 use log4rs;
 
 pub fn init() {
