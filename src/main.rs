@@ -115,12 +115,11 @@ fn process_logs(
     let mut topic_transfer_count = 0;
     for (idx, log) in logs.iter().enumerate() {
         db.insert(log.to_upsert_sql());
-        log::info!("#{} log {}/{}", fetch_block_number, idx, logs.len());
         if log.topics.len() > 0 {
             let _ = match log.topics[0].as_str() {
                 uniswap::v2::TOPIC_SWAP => {
                     topic_swap_count += 1;
-                    process_swap(db, log)
+                    process_swap(db, log, fetch_block_number)
                 }
                 uniswap::v2::TOPIC_SYNC => {
                     topic_sync_count += 1;
@@ -157,7 +156,8 @@ fn process_sync(
         U256::from_str_radix(&log.data[66..130], 16).unwrap(),
     );
     log::info!(
-        "log sync pool {} tx {} reserves {:?}",
+        "#{} log sync pool {} tx {} reserves {:?}",
+        fetch_block_number,
         log.address.strip_prefix("0x").unwrap(),
         log.transaction_index,
         reserves,
@@ -194,12 +194,17 @@ fn ensure_pool(
     }
 }
 
-fn process_swap(db: &mut sql::Client, log: &InfuraLog) -> Result<(), Box<dyn Error>> {
+fn process_swap(
+    db: &mut sql::Client,
+    log: &InfuraLog,
+    block_number: u32,
+) -> Result<(), Box<dyn Error>> {
     let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
     match db.first(sql) {
         Some(_row) => {
             log::info!(
-                "log swap pool {} tx {} in0 {} in1 {} out0 {} out1 {}",
+                "#{} log swap pool {} tx {} in0 {} in1 {} out0 {} out1 {}",
+                block_number,
                 log.address.strip_prefix("0x").unwrap(),
                 log.transaction_index,
                 U256::from_str_radix(&log.data[2..66], 16).unwrap(),
