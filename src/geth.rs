@@ -140,10 +140,14 @@ impl Client {
             .send_json(&jrpc);
         match result {
             Ok(res) => {
+                log::info!(target: "http", "{} {}", self.url, res.status_text() );
                 let rpc_result = res.into_json::<JsonRpcResult>().unwrap();
                 Ok(rpc_result)
             }
-            Err(e) => Err(Box::new(e)),
+            Err(e) => {
+                log::info!(target: "http", "{} {}", self.url, e);
+                Err(Box::new(e))
+            }
         }
     }
 }

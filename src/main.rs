@@ -157,8 +157,9 @@ fn process_sync(
         U256::from_str_radix(&log.data[66..130], 16).unwrap(),
     );
     log::info!(
-        "log sync pool {} reserves {:?}",
-        hex::encode(pool.contract_address),
+        "log sync pool {} tx {} reserves {:?}",
+        log.address.strip_prefix("0x").unwrap(),
+        log.transaction_index,
         reserves,
     );
     update_pool_reserves(db, &pool, fetch_block_number, reserves)?;
@@ -195,15 +196,19 @@ fn ensure_pool(
 
 fn process_swap(db: &mut sql::Client, log: &InfuraLog) -> Result<(), Box<dyn Error>> {
     let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
-    if let Some(_) = db.first(sql) {
-        log::info!(
-            "log swap pool {} in0 {} in1 {} out0 {} out1 {}",
-            log.address.strip_prefix("0x").unwrap(),
-            U256::from_str_radix(&log.data[2..66], 16).unwrap(),
-            U256::from_str_radix(&log.data[66..130], 16).unwrap(),
-            U256::from_str_radix(&log.data[130..194], 16).unwrap(),
-            U256::from_str_radix(&log.data[194..258], 16).unwrap(),
-        );
+    match db.first(sql) {
+        Some(_row) => {
+            log::info!(
+                "log swap pool {} tx {} in0 {} in1 {} out0 {} out1 {}",
+                log.address.strip_prefix("0x").unwrap(),
+                log.transaction_index,
+                U256::from_str_radix(&log.data[2..66], 16).unwrap(),
+                U256::from_str_radix(&log.data[66..130], 16).unwrap(),
+                U256::from_str_radix(&log.data[130..194], 16).unwrap(),
+                U256::from_str_radix(&log.data[194..258], 16).unwrap(),
+            );
+        }
+        None => {}
     }
     Ok(())
 }

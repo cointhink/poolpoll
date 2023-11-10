@@ -81,12 +81,15 @@ impl Etherscan {
     where
         for<'a> T: Deserialize<'a>,
     {
-        log::info!("{}", url);
-        let result: RpcResult<T> = ureq::get(&url).call().unwrap().into_json().unwrap();
+        log::info!(target: "http", "{}", url);
+        let result: RpcResult<T> = ureq::get(&url).call().unwrap().into_json()?;
         if result.status == "1" {
             Ok(result.result)
         } else {
-            Err(Box::from(format!("infura rpc status: {}", result.message)))
+            Err(Box::from(format!(
+                "etherscan rpc status: {}",
+                result.message
+            )))
         }
     }
 }

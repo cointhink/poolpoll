@@ -3,7 +3,6 @@ pub mod v3 {
 }
 
 pub mod v2 {
-    use crate::geth::InfuraLog;
     use crate::{geth::Client, sql::SqlQuery};
     use ethabi::token::Token;
     use ethabi::Contract;
@@ -16,6 +15,10 @@ pub mod v2 {
 
     const UNISWAP_FACTORY: &str = "5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
     pub static ABI: OnceLock<Contract> = OnceLock::new();
+    pub const TOPIC_SWAP: &str =
+        "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822";
+    pub const TOPIC_SYNC: &str =
+        "0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1";
 
     #[derive(Debug)]
     pub struct AddressStringNox(pub String);
@@ -225,17 +228,6 @@ pub mod v2 {
             };
             return Ok(addr);
         }
-    }
-
-    pub const TOPIC_SWAP: &str =
-        "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822";
-    pub const TOPIC_SYNC: &str =
-        "0x1c411e9a96e071241c2f21f7726b17ae89e3cab4c78be50e062b03a9fffbbad1";
-    pub fn topic_filter(topic0: &str) -> impl Fn(&&InfuraLog) -> bool + '_ {
-        return move |log| {
-            // Swap (index_topic_1 address sender, uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out, index_topic_2 address to)
-            log.topics.len() > 0 && log.topics[0] == topic0
-        };
     }
 
     #[cfg(test)]
