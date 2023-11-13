@@ -13,6 +13,8 @@ ethereum-types = "0.14.1"
 hex = "0.4.3"
 log = "0.4.19"
 log4rs = "1.2.0"
+num-traits = "0.2.17"
+pg_bigdecimal = "0.1.5"
 postgres = "0.19.5"
 rand = "0.8.5"
 refinery = { version = "0.8.10", features = ["postgres"] }

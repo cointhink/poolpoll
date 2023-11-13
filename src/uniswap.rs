@@ -7,6 +7,7 @@ pub mod v2 {
     use ethabi::token::Token;
     use ethabi::Contract;
     use ethereum_types::{Address, U256};
+    use pg_bigdecimal::{BigInt, PgNumeric};
     use postgres::types::private::BytesMut;
     use postgres::types::{IsNull, Type};
     use sql_query_builder as sql;
@@ -76,11 +77,11 @@ pub mod v2 {
     pub(crate) struct Swap<'a> {
         pub pool: &'a Pool,
         pub block_number: u128,
-        pub transaction_index: u128,
-        pub in0: U256,
-        pub in1: U256,
-        pub out0: U256,
-        pub out1: U256,
+        pub transaction_index: u32,
+        pub in0: BigInt,
+        pub in1: BigInt,
+        pub out0: BigInt,
+        pub out1: BigInt,
     }
 
     impl Pool {
@@ -164,16 +165,24 @@ pub mod v2 {
         fn to_upsert_sql(&self) -> crate::sql::SqlQuery {
             <dyn crate::Ops>::upsert_sql(
                 "swaps",
-                vec!["pool_contract_address", "block_number", "transaction_index"],
-                vec!["in0", "in1", "out0", "out1"],
+                vec![],
+                vec![
+                    "pool_contract_address",
+                    "block_number",
+                    "transaction_index",
+                    "in0",
+                    "in1",
+                    "out0",
+                    "out1",
+                ],
                 vec![
                     Box::new(format!("{:x}", self.pool.contract_address)),
                     Box::new(self.block_number as i32),
                     Box::new(self.transaction_index as i32),
-                    Box::new(format!("{}", self.in0)),
-                    Box::new(format!("{}", self.in1)),
-                    Box::new(format!("{}", self.out0)),
-                    Box::new(format!("{}", self.out1)),
+                    Box::new(PgNumeric::new(Some(self.in0.clone().into()))),
+                    Box::new(PgNumeric::new(Some(self.in1.clone().into()))),
+                    Box::new(PgNumeric::new(Some(self.out0.clone().into()))),
+                    Box::new(PgNumeric::new(Some(self.out1.clone().into()))),
                 ],
             )
         }

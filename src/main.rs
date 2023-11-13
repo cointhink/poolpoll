@@ -7,6 +7,8 @@ use crate::erc20::Erc20;
 use crate::geth::{InfuraBlock, InfuraLog};
 use crate::sql::Ops;
 use ethereum_types::{Address, U256};
+use num_traits::Num;
+use pg_bigdecimal::BigInt;
 
 mod coin;
 mod config;
@@ -174,10 +176,10 @@ fn process_swap(
     let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
     match db.first(sql) {
         Some(row) => {
-            let in0 = U256::from_str_radix(&log.data[2..66], 16).unwrap();
-            let in1 = U256::from_str_radix(&log.data[66..130], 16).unwrap();
-            let out0 = U256::from_str_radix(&log.data[130..194], 16).unwrap();
-            let out1 = U256::from_str_radix(&log.data[194..258], 16).unwrap();
+            let in0 = BigInt::from_str_radix(&log.data[2..66], 16).unwrap();
+            let in1 = BigInt::from_str_radix(&log.data[66..130], 16).unwrap();
+            let out0 = BigInt::from_str_radix(&log.data[130..194], 16).unwrap();
+            let out1 = BigInt::from_str_radix(&log.data[194..258], 16).unwrap();
             log::info!(
                 "#{} log swap pool {} tx {} in0 {} in1 {} out0 {} out1 {}",
                 block_number,
@@ -189,10 +191,11 @@ fn process_swap(
                 out1
             );
             let pool = uniswap::v2::Pool::from(&row);
+            log::info!("BIGASS ints in0 text {} number {}", &log.data[2..66], in0);
             let swap = uniswap::v2::Swap {
                 pool: &pool,
                 block_number: block_number as u128,
-                transaction_index: u128::from_str_radix(&log.transaction_index, 16).unwrap(),
+                transaction_index: log.transaction_index,
                 in0,
                 in1,
                 out0,
