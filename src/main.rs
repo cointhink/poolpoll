@@ -191,7 +191,6 @@ fn process_swap(
                 out1
             );
             let pool = uniswap::v2::Pool::from(&row);
-            log::info!("BIGASS ints in0 text {} number {}", &log.data[2..66], in0);
             let swap = uniswap::v2::Swap {
                 pool: &pool,
                 block_number: block_number as u128,
