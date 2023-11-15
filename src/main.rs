@@ -314,14 +314,16 @@ fn create_token(
     let rows = sql.q((exist.to_string(), vec![Box::new(format!("{:x}", address))]));
     if rows.len() == 0 {
         let token = Erc20 { address };
-        let name = token.name(&geth).unwrap_or_else(|e| {
+        let mut name = token.name(&geth).unwrap_or_else(|e| {
             log::info!("warning: token decode fail: {:?}", e);
             "".to_string()
         });
-        let symbol = token.symbol(&geth).unwrap_or_else(|e| {
+        string_filter_null(&mut name); // psql does not allow nulls
+        let mut symbol = token.symbol(&geth).unwrap_or_else(|e| {
             log::info!("warning: symbol decode fail: {:?}", e);
             "".to_string()
         });
+        string_filter_null(&mut symbol);
         if let Ok(decimals) = token.decimals(&geth) {
             let coin = Coin {
                 contract_address: token.address,
@@ -338,6 +340,10 @@ fn create_token(
     } else {
         Ok(Coin::from(&rows[0]))
     }
+}
+
+fn string_filter_null(str: &mut String) {
+    str.retain(|c| c == '\0')
 }
 
 fn elapsed_in_words(secs: u64) -> String {
