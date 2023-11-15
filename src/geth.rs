@@ -47,9 +47,12 @@ impl Client {
             )
             .into()),
             Ok(tokens) => {
-                println!(
+                log::info!(
                     "geth call {}({:?})@{} => {:?}",
-                    function_name, function_params, to_hex, tokens
+                    function_name,
+                    function_params,
+                    to_hex,
+                    tokens
                 );
                 Ok(tokens)
             }
@@ -129,6 +132,7 @@ impl Client {
         method: &str,
         params: ParamTypes,
     ) -> Result<JsonRpcResult, Box<dyn std::error::Error>> {
+        let params_str = format!("{:?}", params);
         let jrpc = JsonRpc {
             jsonrpc: "2.0".to_string(),
             id: gen_id(),
@@ -140,12 +144,12 @@ impl Client {
             .send_json(&jrpc);
         match result {
             Ok(res) => {
-                log::info!(target: "http", "{} {}", self.url, res.status_text() );
+                log::info!(target: "http", "{} {} {} {}", self.url, method, params_str, res.status_text() );
                 let rpc_result = res.into_json::<JsonRpcResult>().unwrap();
                 Ok(rpc_result)
             }
             Err(e) => {
-                log::info!(target: "http", "{} {}", self.url, e);
+                log::info!(target: "http", "{} {} {} {}", self.url, method, params_str, e);
                 Err(Box::new(e))
             }
         }

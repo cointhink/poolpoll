@@ -343,7 +343,7 @@ fn create_token(
 }
 
 fn string_filter_null(str: &mut String) {
-    str.retain(|c| c == '\0')
+    str.retain(|c| c != '\0')
 }
 
 fn elapsed_in_words(secs: u64) -> String {

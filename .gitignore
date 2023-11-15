@@ -1,6 +1,6 @@
 /target
 /Cargo.lock
-/logs
+/log
 /.idea
 /config.yaml
 /cockroach-data

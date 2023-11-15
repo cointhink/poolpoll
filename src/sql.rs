@@ -79,6 +79,7 @@ impl Client {
     }
 
     pub fn q(&mut self, query: SqlQuery) -> Vec<postgres::Row> {
+        log::info!(target: "sql", "{} {:?}", query.0, query.1);
         let params: Vec<&(dyn ToSql + Sync)> = query.1.iter().map(|y| &**y).collect();
         self.client.query(&query.0, &params).unwrap()
     }
@@ -93,7 +94,7 @@ impl Client {
     }
 
     pub fn insert(&mut self, query: SqlQuery) {
-        log::debug!("sql: {} {:?}", query.0, query.1);
+        log::info!(target: "sql", "{} {:?}", query.0, query.1);
         // expected `&[&dyn ToSql + Sync]`, found `&Vec<Box<dyn ToSql + Sync>>`
         // self.client.execute(&query.0, &query.1).unwrap();
 

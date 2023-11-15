@@ -5,10 +5,15 @@ appenders:
       pattern: "{m}{n}"
   stdlog:
     kind: file
-    path: logs/run.log
+    path: log/run.log
+  sqlout:
+    kind: file
+    path: log/sql.log
+    encoder:
+      pattern: "{d} {m}{n}"
   httpout:
     kind: file
-    path: logs/http.log
+    path: log/http.log
     encoder:
       pattern: "{d} {m}{n}"
 
@@ -19,6 +24,11 @@ root:
     - stdlog
 
 loggers:
+  sql:
+    level: info
+    appenders:
+      - sqlout
+    additive: false
   http:
     level: info
     appenders:
