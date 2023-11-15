@@ -10,3 +10,5 @@ CREATE TABLE IF NOT EXISTS swaps (
   out1 DECIMAL
 );
 
+create unique index on swaps (pool_contract_address, block_number, transaction_index);
+
