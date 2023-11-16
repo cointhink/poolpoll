@@ -118,27 +118,6 @@ impl Client {
         let params: Vec<&(dyn ToSql + Sync)> = query.1.iter().map(|y| &**y).collect();
         self.client.query(&query.0, &params).unwrap()
     }
-
-    pub fn first(&mut self, query: SqlQuery) -> Option<postgres::Row> {
-        let mut rows = self.q(query);
-        if rows.len() > 0 {
-            Some(rows.remove(0))
-        } else {
-            None
-        }
-    }
-
-    pub fn insert(&mut self, query: SqlQuery) {
-        log::info!(target: "sql", "{} {:?}", query.0, query.1);
-        // expected `&[&dyn ToSql + Sync]`, found `&Vec<Box<dyn ToSql + Sync>>`
-        // self.client.execute(&query.0, &query.1).unwrap();
-
-        // convert element type from String to ToSql+Sync
-        let params: Vec<&(dyn ToSql + Sync)> = query.1.iter().map(|y| &**y).collect();
-
-        //  params: &[&(dyn ToSql + Sync)]
-        self.client.execute(&query.0, &params).unwrap();
-    }
 }
 
 mod embedded {

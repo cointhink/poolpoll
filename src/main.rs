@@ -171,7 +171,7 @@ fn process_sync(
         U256::from_str_radix(&log.data[66..130], 16).unwrap(),
     );
     log::info!(
-        "#{} log sync pool {} tx {} reserves {:?}",
+        "#{} log sync pool {} tx {:0>3} reserves {:?}",
         fetch_block_number,
         log.address.strip_prefix("0x").unwrap(),
         log.transaction_index,
@@ -194,7 +194,7 @@ fn process_swap(
             let out0 = BigInt::from_str_radix(&log.data[130..194], 16).unwrap();
             let out1 = BigInt::from_str_radix(&log.data[194..258], 16).unwrap();
             log::info!(
-                "#{} log swap pool {} tx {} in0 {} in1 {} out0 {} out1 {}",
+                "#{} log swap pool {} tx {:0>3} swap in0 {} in1 {} out0 {} out1 {}",
                 block_number,
                 log.address.strip_prefix("0x").unwrap(),
                 log.transaction_index,
