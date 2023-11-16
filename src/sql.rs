@@ -54,6 +54,41 @@ impl dyn Ops {
     }
 }
 
+pub struct TransactionClient<'a> {
+    pub client: postgres::Transaction<'a>,
+    pub xact_id: String,
+}
+
+impl TransactionClient<'_> {
+    pub fn new(db: &mut Client) -> TransactionClient<'_> {
+        let mut transaction = db.client.transaction().unwrap();
+        let row = transaction
+            .query_one("select pg_current_xact_id()::text", &vec![])
+            .unwrap();
+        log::info!("xactid {:?}", row);
+        let xact_id = row.get::<&str, Option<String>>("pg_current_xact_id");
+        TransactionClient {
+            client: transaction,
+            xact_id: xact_id.unwrap(),
+        }
+    }
+
+    pub fn q(&mut self, query: SqlQuery) -> Vec<postgres::Row> {
+        log::info!(target: "sql", "[xact {}] {} {:?}", self.xact_id, query.0, query.1);
+        let params: Vec<&(dyn ToSql + Sync)> = query.1.iter().map(|y| &**y).collect();
+        self.client.query(&query.0, &params).unwrap()
+    }
+
+    pub fn first(&mut self, query: SqlQuery) -> Option<postgres::Row> {
+        let mut rows = self.q(query);
+        if rows.len() > 0 {
+            Some(rows.remove(0))
+        } else {
+            None
+        }
+    }
+}
+
 pub struct Client {
     pub client: postgres::Client,
 }

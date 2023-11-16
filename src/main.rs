@@ -40,13 +40,13 @@ fn main() {
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
         refresh(&geth, &mut sql, last_block_number);
     } else if std::env::args().find(|arg| arg == "tail").is_some() {
-        tail_from(&geth, &mut sql, last_block_number);
+        tail(&geth, &mut sql, last_block_number);
     } else {
         log::info!("commands: discover, refresh, tail")
     }
 }
 
-fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u32) {
+fn tail(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u32) {
     let mut geth_block_number = last_block_number;
     loop {
         let started = std::time::Instant::now();
@@ -56,11 +56,10 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
         if db_block_number < geth_block_number {
             let fetch_block_number = db_block_number + 1;
             match geth.block(fetch_block_number) {
-                Ok(block) => {
-                    match geth.logs(fetch_block_number) {
-                        Ok(logs) => match process_logs(geth, db, fetch_block_number, logs) {
-                            Ok(_) => {
-                                log::info!(
+                Ok(block) => match geth.logs(fetch_block_number) {
+                    Ok(logs) => {
+                        process_logs_and_mark_block(geth, db, fetch_block_number, logs, &block);
+                        log::info!(
                             "processed in {} seconds. db #{}. eth #{}. {} blocks / {} behind.",
                             started.elapsed().as_secs(),
                             db_block_number,
@@ -68,18 +67,11 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
                             geth_block_number - db_block_number,
                             elapsed_in_words(seconds_since_block(&block)),
                         );
-                                // mark block as visited
-                                db.insert(block.to_upsert_sql());
-                            }
-                            Err(e) => {
-                                log::info!("block {} processing failed: {}", fetch_block_number, e)
-                            }
-                        },
-                        Err(e) => {
-                            log::info!("block {} logs fetch failed: {:?}", fetch_block_number, e)
-                        }
                     }
-                }
+                    Err(e) => {
+                        log::info!("block {} logs fetch failed: {:?}", fetch_block_number, e)
+                    }
+                },
                 Err(e) => log::info!("tail_from eth block get failed {:?}", e),
             }
         }
@@ -98,6 +90,27 @@ fn tail_from(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u
     }
 }
 
+fn process_logs_and_mark_block(
+    geth: &geth::Client,
+    db: &mut sql::Client,
+    fetch_block_number: u32,
+    logs: Vec<InfuraLog>,
+    block: &InfuraBlock,
+) {
+    let mut db = sql::TransactionClient::new(db);
+    match process_logs(geth, &mut db, fetch_block_number, logs) {
+        Ok(_) => {
+            // mark block as visited
+            db.q(block.to_upsert_sql());
+            db.client.commit().unwrap();
+        }
+        Err(e) => {
+            db.client.rollback().unwrap();
+            log::info!("block {} processing failed: {}", fetch_block_number, e)
+        }
+    }
+}
+
 fn seconds_since_block(block: &InfuraBlock) -> u64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -108,7 +121,7 @@ fn seconds_since_block(block: &InfuraBlock) -> u64 {
 
 fn process_logs(
     geth: &geth::Client,
-    db: &mut sql::Client,
+    db: &mut sql::TransactionClient,
     fetch_block_number: u32,
     logs: Vec<InfuraLog>,
 ) -> Result<(), Box<dyn Error>> {
@@ -116,7 +129,7 @@ fn process_logs(
     let mut topic_sync_count = 0;
     let mut topic_transfer_count = 0;
     for log in &logs {
-        db.insert(log.to_upsert_sql());
+        db.q(log.to_upsert_sql());
         if log.topics.len() > 0 {
             let _ = match log.topics[0].as_str() {
                 uniswap::v2::TOPIC_SWAP => {
@@ -148,7 +161,7 @@ fn process_logs(
 
 fn process_sync(
     geth: &geth::Client,
-    db: &mut sql::Client,
+    db: &mut sql::TransactionClient,
     log: &InfuraLog,
     fetch_block_number: u32,
 ) -> Result<(), Box<dyn Error>> {
@@ -169,7 +182,7 @@ fn process_sync(
 }
 
 fn process_swap(
-    db: &mut sql::Client,
+    db: &mut sql::TransactionClient,
     log: &InfuraLog,
     block_number: u32,
 ) -> Result<(), Box<dyn Error>> {
@@ -200,7 +213,7 @@ fn process_swap(
                 out0,
                 out1,
             };
-            db.insert(swap.to_upsert_sql());
+            db.q(swap.to_upsert_sql());
         }
         None => {
             log::warn!("process_swap could not find pool in db {}", log.address);
@@ -211,7 +224,7 @@ fn process_swap(
 
 fn ensure_pool(
     geth: &geth::Client,
-    db: &mut sql::Client,
+    db: &mut sql::TransactionClient,
     address: &str,
 ) -> Result<uniswap::v2::Pool, Box<dyn Error>> {
     let sql = uniswap::v2::Pool::find_by_contract_address(address.into());
@@ -245,14 +258,20 @@ fn refresh(geth: &geth::Client, db: &mut sql::Client, eth_block: u32) {
         let reserves =
             uniswap::v2::Pool::reserves(&geth, &abi_pool, &pool.contract_address, eth_block)
                 .unwrap();
-        match update_pool_reserves(db, &pool, eth_block, reserves) {
-            Ok(_) => (),
-            Err(err) => log::info!("warning: pool reserves update failed. {}", err),
+        let mut db = sql::TransactionClient::new(db);
+        match update_pool_reserves(&mut db, &pool, eth_block, reserves) {
+            Ok(_) => {
+                db.client.commit().unwrap();
+            }
+            Err(err) => {
+                db.client.rollback().unwrap();
+                log::info!("warning: pool reserves update failed. {}", err)
+            }
         };
     }
 }
 
-fn discover(geth: &geth::Client, sql: &mut sql::Client) {
+fn discover(geth: &geth::Client, db: &mut sql::Client) {
     uniswap::v2::Factory::setup();
     let pool_count = uniswap::v2::Factory::pool_count(&geth).unwrap().low_u64();
     log::info!("Uniswap v2 contract count {:?}", pool_count,);
@@ -260,7 +279,8 @@ fn discover(geth: &geth::Client, sql: &mut sql::Client) {
     let abi_pool = ethabi::Contract::load(abi_file).unwrap();
     for pool_idx in pool_count - 10..pool_count {
         let address = uniswap::v2::Factory::pool_addr(&geth, pool_idx).unwrap();
-        match create_pool(geth, sql, &abi_pool, address) {
+        let mut db = sql::TransactionClient::new(db);
+        match create_pool(geth, &mut db, &abi_pool, address) {
             Ok(_) => (),
             Err(err) => log::info!(
                 "warning: pool creation {} failed: {}",
@@ -273,7 +293,7 @@ fn discover(geth: &geth::Client, sql: &mut sql::Client) {
 
 fn create_pool(
     geth: &geth::Client,
-    sql: &mut sql::Client,
+    db: &mut sql::TransactionClient,
     abi_pool: &ethabi::Contract,
     address: Address,
 ) -> Result<uniswap::v2::Pool, Box<dyn Error>> {
@@ -283,35 +303,35 @@ fn create_pool(
         token0: tokens.0,
         token1: tokens.1,
     };
-    create_token(&geth, sql, tokens.0)?;
-    create_token(&geth, sql, tokens.1)?;
+    create_token(&geth, db, tokens.0)?;
+    create_token(&geth, db, tokens.1)?;
 
     log::info!("Created {:?}", pool);
-    sql.insert(pool.to_upsert_sql());
+    db.q(pool.to_upsert_sql());
     Ok(pool)
 }
 
 fn update_pool_reserves<'a>(
-    sql: &mut sql::Client,
+    db: &mut sql::TransactionClient,
     pool: &'a uniswap::v2::Pool,
     eth_block: u32,
     reserves: (U256, U256),
 ) -> Result<uniswap::v2::Reserves<'a>, Box<dyn Error>> {
     let pool_reserves = uniswap::v2::Reserves::new(&pool, eth_block, reserves);
-    sql.insert(pool_reserves.to_upsert_sql());
+    db.q(pool_reserves.to_upsert_sql());
     Ok(pool_reserves)
 }
 
 fn create_token(
     geth: &crate::geth::Client,
-    sql: &mut crate::sql::Client,
+    db: &mut sql::TransactionClient,
     address: Address,
 ) -> Result<Coin, Box<dyn Error>> {
     let exist = sql_query_builder::Select::new()
         .select("*")
         .from("coins")
         .where_clause("contract_address = $1");
-    let rows = sql.q((exist.to_string(), vec![Box::new(format!("{:x}", address))]));
+    let rows = db.q((exist.to_string(), vec![Box::new(format!("{:x}", address))]));
     if rows.len() == 0 {
         let token = Erc20 { address };
         let mut name = token.name(&geth).unwrap_or_else(|e| {
@@ -331,7 +351,7 @@ fn create_token(
                 symbol,
                 decimals,
             };
-            sql.insert(coin.to_upsert_sql());
+            db.q(coin.to_upsert_sql());
             log::info!("Created {:?}", coin);
             Ok(coin)
         } else {

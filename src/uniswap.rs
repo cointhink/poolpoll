@@ -165,8 +165,16 @@ pub mod v2 {
         fn to_upsert_sql(&self) -> crate::sql::SqlQuery {
             <dyn crate::Ops>::upsert_sql(
                 "swaps",
-                vec!["pool_contract_address", "block_number", "transaction_index"],
-                vec!["in0", "in1", "out0", "out1"],
+                vec![],
+                vec![
+                    "pool_contract_address",
+                    "block_number",
+                    "transaction_index",
+                    "in0",
+                    "in1",
+                    "out0",
+                    "out1",
+                ],
                 vec![
                     Box::new(format!("{:x}", self.pool.contract_address)),
                     Box::new(self.block_number as i32),
