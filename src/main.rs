@@ -150,7 +150,7 @@ fn process_logs(
         }
     }
     log::info!(
-        "block #{} {} logs. {} erc20 transfer logs. uniswap {} swaps {} syncs",
+        "[#{}] {} logs. {} erc20 transfer logs. uniswap {} swaps {} syncs",
         fetch_block_number,
         logs.len(),
         topic_transfer_count,
