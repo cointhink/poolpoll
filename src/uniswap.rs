@@ -143,6 +143,34 @@ pub mod v2 {
                 y: reserves.1,
             }
         }
+
+        pub fn find_by_pool(pool: Pool) -> SqlQuery {
+            let select = sql::Select::new()
+                .select("*")
+                .from("pools")
+                .where_clause("contract_address = $1")
+                .order_by("block_number desc")
+                .limit("1");
+
+            (
+                select.to_string(),
+                vec![Box::new(pool.contract_address.to_string())],
+            )
+        }
+
+        pub fn token0_rate(&self) -> u8 {
+            1
+        }
+    }
+
+    impl From<&postgres::Row> for Reserves<'_> {
+        fn from(row: &postgres::Row) -> Self {
+            Reserves {
+                x: U256::from_str_radix(row.get::<_, _>("x"), 10).unwrap(),
+                y: U256::from_str_radix(row.get::<_, _>("y"), 10).unwrap(),
+                block_number: row.get::<_, i64>("block_number") as u128,
+            }
+        }
     }
 
     impl crate::sql::Ops for Reserves<'_> {

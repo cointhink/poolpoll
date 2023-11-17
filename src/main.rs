@@ -204,6 +204,14 @@ fn process_swap(
                 out1
             );
             let pool = uniswap::v2::Pool::from(&row);
+            let sql = uniswap::v2::Reserves::find_by_pool(pool);
+            let row = db.first(sql).unwrap();
+            let reserves: uniswap::v2::Reserves = (&row).into();
+            let in0_eth;
+            if is_cash_token(pool.token1) {
+                in0_eth = in0 * reserves.token0_rate();
+            } else {
+            }
             let swap = uniswap::v2::Swap {
                 pool: &pool,
                 block_number: block_number as u128,
@@ -220,6 +228,13 @@ fn process_swap(
         }
     }
     Ok(())
+}
+
+fn is_cash_token(token_address: Address) -> bool {
+    match token_address.to_string().as_str() {
+        "123" => true,
+        _ => false,
+    }
 }
 
 fn ensure_pool(
