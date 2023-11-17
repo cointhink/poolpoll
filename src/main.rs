@@ -196,36 +196,37 @@ fn process_swap(
             let out1 = BigInt::from_str_radix(&log.data[194..258], 16).unwrap();
             let pool = uniswap::v2::Pool::from(&row);
             let sql = uniswap::v2::Reserves::find_by_pool(&pool);
-            let row = db.first(sql).unwrap();
-            let reserves = uniswap::v2::Reserves::from_row(&row, &pool);
-            let mut in0_eth = BigInt::default();
-            let mut in1_eth = BigInt::default();
-            let row = db
-                .first(Coin::find_by_contract_address((&pool.token0).into()))
-                .unwrap();
-            let coin0: Coin = (&row).into();
-            let row = db
-                .first(Coin::find_by_contract_address((&pool.token1).into()))
-                .unwrap();
-            let coin1: Coin = (&row).into();
-            if is_cash_token(pool.token0) {
-                in0_eth = in0.clone();
-                in1_eth = reserves
-                    .token1_rate(coin0.decimals, coin1.decimals)
-                    .mul(&in1)
-                    .with_scale(0)
-                    .into_bigint_and_exponent()
-                    .0;
-            } else if is_cash_token(pool.token1) {
-                in0_eth = reserves
-                    .token0_rate(coin0.decimals, coin1.decimals)
-                    .mul(&in0)
-                    .with_scale(0)
-                    .into_bigint_and_exponent()
-                    .0;
-                in1_eth = in1.clone();
-            }
-            log::info!(
+            match db.first(sql) {
+                Some(row) => {
+                    let reserves = uniswap::v2::Reserves::from_row(&row, &pool);
+                    let mut in0_eth = BigInt::default();
+                    let mut in1_eth = BigInt::default();
+                    let row = db
+                        .first(Coin::find_by_contract_address((&pool.token0).into()))
+                        .unwrap();
+                    let coin0: Coin = (&row).into();
+                    let row = db
+                        .first(Coin::find_by_contract_address((&pool.token1).into()))
+                        .unwrap();
+                    let coin1: Coin = (&row).into();
+                    if is_cash_token(pool.token0) {
+                        in0_eth = in0.clone();
+                        in1_eth = reserves
+                            .token1_rate(coin0.decimals, coin1.decimals)
+                            .mul(&in1)
+                            .with_scale(0)
+                            .into_bigint_and_exponent()
+                            .0;
+                    } else if is_cash_token(pool.token1) {
+                        in0_eth = reserves
+                            .token0_rate(coin0.decimals, coin1.decimals)
+                            .mul(&in0)
+                            .with_scale(0)
+                            .into_bigint_and_exponent()
+                            .0;
+                        in1_eth = in1.clone();
+                    }
+                    log::info!(
                 "#{} log swap pool {} tx {:0>3} swap in0 {} in0_eth {} in1_eth {} in1 {} out0 {} out1 {}",
                 block_number,
                 log.address.strip_prefix("0x").unwrap(),
@@ -237,7 +238,7 @@ fn process_swap(
                 out0,
                 out1
             );
-            log::info!(
+                    log::info!(
                 "reserves block {} coin0_decimals {} coin1_decimals {} token0_rate {:.8} token1_rate {:.8}",
                 reserves.block_number,
                 coin0.decimals,
@@ -245,18 +246,24 @@ fn process_swap(
                 reserves.token0_rate(coin0.decimals, coin1.decimals),
                 reserves.token1_rate(coin0.decimals, coin1.decimals)
             );
-            let swap = uniswap::v2::Swap {
-                pool: &pool,
-                block_number: block_number as u128,
-                transaction_index: log.transaction_index,
-                in0,
-                in0_eth,
-                in1,
-                in1_eth,
-                out0,
-                out1,
-            };
-            db.q(swap.to_upsert_sql());
+                    let swap = uniswap::v2::Swap {
+                        pool: &pool,
+                        block_number: block_number as u128,
+                        transaction_index: log.transaction_index,
+                        in0,
+                        in0_eth,
+                        in1,
+                        in1_eth,
+                        out0,
+                        out1,
+                    };
+                    db.q(swap.to_upsert_sql());
+                }
+                None => log::info!(
+                    "warning: swap processed with no reserves available for pool {}",
+                    pool.contract_address
+                ),
+            }
         }
         None => {
             log::warn!("process_swap could not find pool in db {}", log.address);
