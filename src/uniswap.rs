@@ -30,6 +30,12 @@ pub mod v2 {
         }
     }
 
+    impl From<&Address> for AddressStringNox {
+        fn from(value: &Address) -> Self {
+            AddressStringNox(format!("{:x}", value))
+        }
+    }
+
     impl postgres::types::ToSql for AddressStringNox {
         fn to_sql(
             &self,
@@ -160,11 +166,16 @@ pub mod v2 {
             )
         }
 
-        pub fn token0_rate(&self) -> u8 {
-            1
+        pub fn token0_rate(&self, x_decimals: u32, y_decimals: u32) -> BigInt {
+            Self::u256_div_u256(self.x, x_decimals, self.y, y_decimals)
         }
-        pub fn token1_rate(&self) -> u8 {
-            1
+
+        pub fn token1_rate(&self, x_decimals: u32, y_decimals: u32) -> BigInt {
+            Self::u256_div_u256(self.y, y_decimals, self.x, x_decimals)
+        }
+
+        fn u256_div_u256(a: U256, a_decimals: u32, b: U256, b_decimals: u32) -> BigInt {
+            BigInt::from(0)
         }
 
         pub fn from_row(row: &postgres::Row, pool: &'a Pool) -> Self {

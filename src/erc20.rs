@@ -38,7 +38,7 @@ impl Erc20 {
             Err(e) => hex_to_ascii(&e.to_string()), //fallback decode
         }
     }
-    pub fn decimals(&self, geth: &Client) -> Result<U256, Box<dyn std::error::Error>> {
+    pub fn decimals(&self, geth: &Client) -> Result<u32, Box<dyn std::error::Error>> {
         let result = geth.eth_call(
             &self.address,
             &ABI.get().unwrap(),
@@ -50,6 +50,6 @@ impl Erc20 {
             println!("{:?}", result[0]);
             unreachable!()
         };
-        Ok(decimals)
+        Ok(decimals.low_u32())
     }
 }
