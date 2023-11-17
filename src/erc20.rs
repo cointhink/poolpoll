@@ -2,7 +2,6 @@ use crate::geth::Client;
 use ethabi::token::Token;
 use ethabi::Contract;
 use ethereum_types::Address;
-use ethereum_types::U256;
 use std::error::Error;
 use std::sync::OnceLock;
 

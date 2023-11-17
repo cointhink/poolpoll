@@ -9,6 +9,7 @@ use crate::sql::Ops;
 use ethereum_types::{Address, U256};
 use num_traits::Num;
 use pg_bigdecimal::BigInt;
+use std::ops::Mul;
 
 mod coin;
 mod config;
@@ -209,9 +210,17 @@ fn process_swap(
             let coin1: Coin = (&row).into();
             if is_cash_token(pool.token0) {
                 in0_eth = in0.clone();
-                in1_eth = &in1 * reserves.token1_rate(coin0.decimals, coin1.decimals);
+                in1_eth = reserves
+                    .token1_rate(coin0.decimals, coin1.decimals)
+                    .mul(&in1)
+                    .into_bigint_and_exponent()
+                    .0;
             } else if is_cash_token(pool.token1) {
-                in0_eth = &in0 * reserves.token0_rate(coin0.decimals, coin1.decimals);
+                in0_eth = reserves
+                    .token1_rate(coin0.decimals, coin1.decimals)
+                    .mul(&in0)
+                    .into_bigint_and_exponent()
+                    .0;
                 in1_eth = in1.clone();
             }
             log::info!(
@@ -227,7 +236,7 @@ fn process_swap(
                 out1
             );
             log::info!(
-                "reserves block {} coin0_decimals {} coin1_decimals {} token0_rate {} token1_rate {}",
+                "reserves block {} coin0_decimals {} coin1_decimals {} token0_rate {:.8} token1_rate {:.8}",
                 reserves.block_number,
                 coin0.decimals,
                 coin1.decimals,

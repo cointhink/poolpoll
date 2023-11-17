@@ -1,5 +1,4 @@
 use ethereum_types::Address;
-use ethereum_types::U256;
 
 use crate::sql::SqlQuery;
 use crate::uniswap::v2::AddressStringNox;

@@ -7,7 +7,8 @@ pub mod v2 {
     use ethabi::token::Token;
     use ethabi::Contract;
     use ethereum_types::{Address, U256};
-    use pg_bigdecimal::{BigInt, PgNumeric};
+    use num_bigint::Sign;
+    use pg_bigdecimal::{BigDecimal, BigInt, PgNumeric};
     use postgres::types::private::BytesMut;
     use postgres::types::{IsNull, Type};
     use sql_query_builder as sql;
@@ -166,16 +167,18 @@ pub mod v2 {
             )
         }
 
-        pub fn token0_rate(&self, x_decimals: u32, y_decimals: u32) -> BigInt {
+        pub fn token0_rate(&self, x_decimals: u32, y_decimals: u32) -> BigDecimal {
             Self::u256_div_u256(self.x, x_decimals, self.y, y_decimals)
         }
 
-        pub fn token1_rate(&self, x_decimals: u32, y_decimals: u32) -> BigInt {
+        pub fn token1_rate(&self, x_decimals: u32, y_decimals: u32) -> BigDecimal {
             Self::u256_div_u256(self.y, y_decimals, self.x, x_decimals)
         }
 
-        fn u256_div_u256(a: U256, a_decimals: u32, b: U256, b_decimals: u32) -> BigInt {
-            BigInt::from(0)
+        fn u256_div_u256(a: U256, a_decimals: u32, b: U256, b_decimals: u32) -> BigDecimal {
+            let big_a = u256_to_bigint(a);
+            let big_b = u256_to_bigint(b);
+            BigDecimal::new(big_a, a_decimals as i64) / BigDecimal::new(big_b, b_decimals as i64)
         }
 
         pub fn from_row(row: &postgres::Row, pool: &'a Pool) -> Self {
@@ -186,6 +189,12 @@ pub mod v2 {
                 block_number: row.get::<_, i32>("block_number") as u128,
             }
         }
+    }
+
+    fn u256_to_bigint(a: U256) -> BigInt {
+        let mut a_bytes: [u8; 32] = [0; 32];
+        a.to_little_endian(&mut a_bytes);
+        BigInt::from_bytes_le(Sign::Plus, &a_bytes)
     }
 
     impl crate::sql::Ops for Reserves<'_> {
@@ -214,7 +223,9 @@ pub mod v2 {
                     "block_number",
                     "transaction_index",
                     "in0",
+                    "in0_eth",
                     "in1",
+                    "in1_eth",
                     "out0",
                     "out1",
                 ],
@@ -223,7 +234,9 @@ pub mod v2 {
                     Box::new(self.block_number as i32),
                     Box::new(self.transaction_index as i32),
                     Box::new(PgNumeric::new(Some(self.in0.clone().into()))),
+                    Box::new(PgNumeric::new(Some(self.in0_eth.clone().into()))),
                     Box::new(PgNumeric::new(Some(self.in1.clone().into()))),
+                    Box::new(PgNumeric::new(Some(self.in1_eth.clone().into()))),
                     Box::new(PgNumeric::new(Some(self.out0.clone().into()))),
                     Box::new(PgNumeric::new(Some(self.out1.clone().into()))),
                 ],
