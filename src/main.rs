@@ -193,31 +193,39 @@ fn process_swap(
             let in1 = BigInt::from_str_radix(&log.data[66..130], 16).unwrap();
             let out0 = BigInt::from_str_radix(&log.data[130..194], 16).unwrap();
             let out1 = BigInt::from_str_radix(&log.data[194..258], 16).unwrap();
+            let pool = uniswap::v2::Pool::from(&row);
+            let sql = uniswap::v2::Reserves::find_by_pool(&pool);
+            let row = db.first(sql).unwrap();
+            let reserves = uniswap::v2::Reserves::from_row(&row, &pool);
+            let mut in0_eth = BigInt::default();
+            let mut in1_eth = BigInt::default();
+            if is_cash_token(pool.token0) {
+                in0_eth = in0.clone();
+                in1_eth = &in1 * reserves.token1_rate();
+            } else if is_cash_token(pool.token1) {
+                in0_eth = &in0 * reserves.token0_rate();
+                in1_eth = in1.clone();
+            }
             log::info!(
-                "#{} log swap pool {} tx {:0>3} swap in0 {} in1 {} out0 {} out1 {}",
+                "#{} log swap pool {} tx {:0>3} swap in0 {} in0_eth {} in1_eth {} in1 {} out0 {} out1 {}",
                 block_number,
                 log.address.strip_prefix("0x").unwrap(),
                 log.transaction_index,
                 in0,
+                in0_eth,
                 in1,
+                in1_eth,
                 out0,
                 out1
             );
-            let pool = uniswap::v2::Pool::from(&row);
-            let sql = uniswap::v2::Reserves::find_by_pool(pool);
-            let row = db.first(sql).unwrap();
-            let reserves: uniswap::v2::Reserves = (&row).into();
-            let in0_eth;
-            if is_cash_token(pool.token1) {
-                in0_eth = in0 * reserves.token0_rate();
-            } else {
-            }
             let swap = uniswap::v2::Swap {
                 pool: &pool,
                 block_number: block_number as u128,
                 transaction_index: log.transaction_index,
                 in0,
+                in0_eth,
                 in1,
+                in1_eth,
                 out0,
                 out1,
             };
@@ -231,8 +239,9 @@ fn process_swap(
 }
 
 fn is_cash_token(token_address: Address) -> bool {
-    match token_address.to_string().as_str() {
-        "123" => true,
+    let address = format!("{:x}", token_address);
+    match address.as_str() {
+        "c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2" => true, // WETH
         _ => false,
     }
 }

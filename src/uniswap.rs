@@ -79,7 +79,9 @@ pub mod v2 {
         pub block_number: u128,
         pub transaction_index: u32,
         pub in0: BigInt,
+        pub in0_eth: BigInt,
         pub in1: BigInt,
+        pub in1_eth: BigInt,
         pub out0: BigInt,
         pub out1: BigInt,
     }
@@ -144,31 +146,33 @@ pub mod v2 {
             }
         }
 
-        pub fn find_by_pool(pool: Pool) -> SqlQuery {
+        pub fn find_by_pool(pool: &Pool) -> SqlQuery {
             let select = sql::Select::new()
                 .select("*")
-                .from("pools")
+                .from("reserves")
                 .where_clause("contract_address = $1")
                 .order_by("block_number desc")
                 .limit("1");
 
             (
                 select.to_string(),
-                vec![Box::new(pool.contract_address.to_string())],
+                vec![Box::new(format!("{:x}", pool.contract_address))],
             )
         }
 
         pub fn token0_rate(&self) -> u8 {
             1
         }
-    }
+        pub fn token1_rate(&self) -> u8 {
+            1
+        }
 
-    impl From<&postgres::Row> for Reserves<'_> {
-        fn from(row: &postgres::Row) -> Self {
+        pub fn from_row(row: &postgres::Row, pool: &'a Pool) -> Self {
             Reserves {
+                pool: pool,
                 x: U256::from_str_radix(row.get::<_, _>("x"), 10).unwrap(),
                 y: U256::from_str_radix(row.get::<_, _>("y"), 10).unwrap(),
-                block_number: row.get::<_, i64>("block_number") as u128,
+                block_number: row.get::<_, i32>("block_number") as u128,
             }
         }
     }

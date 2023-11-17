@@ -5,7 +5,9 @@ CREATE TABLE IF NOT EXISTS swaps (
   transaction_index Int4,
   transaction_hash VARCHAR(64),
   in0 DECIMAL,
+  in0_eth DECIMAL,
   in1 DECIMAL,
+  in1_eth DECIMAL,
   out0 DECIMAL,
   out1 DECIMAL
 );
