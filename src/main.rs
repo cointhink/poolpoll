@@ -35,7 +35,7 @@ fn main() {
         .unwrap();
 
     let last_block_number = geth.last_block_number();
-    log::info!("eth last block number {}", last_block_number);
+    log::info!("ethereum mainnet latest block #{}", last_block_number);
     if std::env::args().find(|arg| arg == "discover").is_some() {
         discover(&geth, &mut sql);
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
@@ -213,12 +213,14 @@ fn process_swap(
                 in1_eth = reserves
                     .token1_rate(coin0.decimals, coin1.decimals)
                     .mul(&in1)
+                    .with_scale(0)
                     .into_bigint_and_exponent()
                     .0;
             } else if is_cash_token(pool.token1) {
                 in0_eth = reserves
-                    .token1_rate(coin0.decimals, coin1.decimals)
+                    .token0_rate(coin0.decimals, coin1.decimals)
                     .mul(&in0)
+                    .with_scale(0)
                     .into_bigint_and_exponent()
                     .0;
                 in1_eth = in1.clone();

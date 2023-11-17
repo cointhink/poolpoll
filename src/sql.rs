@@ -65,7 +65,6 @@ impl TransactionClient<'_> {
         let row = transaction
             .query_one("select pg_current_xact_id()::text", &vec![])
             .unwrap();
-        log::info!("xactid {:?}", row);
         let xact_id = row.get::<&str, Option<String>>("pg_current_xact_id");
         TransactionClient {
             client: transaction,
