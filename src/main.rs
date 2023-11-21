@@ -212,14 +212,14 @@ fn process_swap(
                     if is_cash_token(pool.token0) {
                         in0_eth = in0.clone();
                         in1_eth = reserves
-                            .token1_rate(coin0.decimals, coin1.decimals)
+                            .token0_rate(coin0.decimals, coin1.decimals)
                             .mul(&in1)
                             .with_scale(0)
                             .into_bigint_and_exponent()
                             .0;
                     } else if is_cash_token(pool.token1) {
                         in0_eth = reserves
-                            .token0_rate(coin0.decimals, coin1.decimals)
+                            .token1_rate(coin0.decimals, coin1.decimals)
                             .mul(&in0)
                             .with_scale(0)
                             .into_bigint_and_exponent()
