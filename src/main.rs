@@ -462,9 +462,7 @@ mod tests {
         let y = BigInt::from_str_radix(&reserves.y.to_string(), 10).unwrap();
 
         let in0 = BigInt::from_str_radix("1200000000", 10).unwrap();
-        let yx = y.clone().div(x.clone());
-        println!("x{} y{} y/x{}", &x, &y, &yx);
-        let in0_eth = in0.clone().mul(yx);
+        let in0_eth = in0.mul(y).div(x);
 
         assert_eq!(
             in0_eth,
