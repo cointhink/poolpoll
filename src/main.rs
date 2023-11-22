@@ -445,3 +445,46 @@ fn elapsed_in_words(secs: u64) -> String {
     msg.push_str(&format!("{} secs", secs));
     return msg;
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::uniswap::v2::{Pool, Reserves};
+
+    use super::*;
+
+    #[test]
+    fn test_token0_to_token0_eth() {
+        let pool = Pool {
+            contract_address: [0; 20].into(),
+            token0: [0; 20].into(),
+            token1: [0; 20].into(),
+        };
+        let reserves = Reserves {
+            pool: &pool,
+            block_number: 1,
+            x: U256::from(2000),
+            y: U256::from(10),
+        };
+        let coin0 = Coin {
+            contract_address: [0; 20].into(),
+            name: "".to_owned(),
+            symbol: "".to_owned(),
+            decimals: 0,
+        };
+        let coin1 = Coin {
+            contract_address: [0; 20].into(),
+            name: "".to_owned(),
+            symbol: "".to_owned(),
+            decimals: 1,
+        };
+        let in0 = BigInt::from(1000);
+        let in0_eth = reserves
+            .token0_rate(coin0.decimals, coin1.decimals)
+            .mul(&in0)
+            .with_scale(0)
+            .into_bigint_and_exponent()
+            .0;
+
+        assert_eq!(in0_eth, BigInt::from(5))
+    }
+}

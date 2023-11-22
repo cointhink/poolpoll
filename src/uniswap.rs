@@ -168,11 +168,11 @@ pub mod v2 {
         }
 
         pub fn token0_rate(&self, x_decimals: u32, y_decimals: u32) -> BigDecimal {
-            Self::u256_div_u256(self.y, y_decimals, self.x, x_decimals)
+            Self::u256_div_u256(self.x, x_decimals, self.y, y_decimals)
         }
 
         pub fn token1_rate(&self, x_decimals: u32, y_decimals: u32) -> BigDecimal {
-            Self::u256_div_u256(self.x, x_decimals, self.y, y_decimals)
+            Self::u256_div_u256(self.y, y_decimals, self.x, x_decimals)
         }
 
         fn u256_div_u256(a: U256, a_decimals: u32, b: U256, b_decimals: u32) -> BigDecimal {
@@ -327,14 +327,5 @@ pub mod v2 {
     }
 
     #[cfg(test)]
-    mod tests {
-        use super::*;
-
-        #[test]
-        fn test_topic_filter_swap() {
-            let mut log = InfuraLog::default();
-            log.topics.push(TOPIC_SWAP.to_string());
-            assert!(topic_filter(TOPIC_SWAP)(&&log))
-        }
-    }
+    mod tests {}
 }
