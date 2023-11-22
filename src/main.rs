@@ -9,7 +9,7 @@ use crate::sql::Ops;
 use ethereum_types::{Address, U256};
 use num_traits::Num;
 use pg_bigdecimal::BigInt;
-use std::ops::Mul;
+use std::ops::{Div, Mul};
 
 mod coin;
 mod config;
@@ -209,21 +209,13 @@ fn process_swap(
                         .first(Coin::find_by_contract_address((&pool.token1).into()))
                         .unwrap();
                     let coin1: Coin = (&row).into();
+                    let x = BigInt::from_str_radix(&reserves.x.to_string(), 10).unwrap();
+                    let y = BigInt::from_str_radix(&reserves.y.to_string(), 10).unwrap();
                     if is_cash_token(pool.token0) {
                         in0_eth = in0.clone();
-                        in1_eth = reserves
-                            .token0_rate(coin0.decimals, coin1.decimals)
-                            .mul(&in1)
-                            .with_scale(0)
-                            .into_bigint_and_exponent()
-                            .0;
+                        in1_eth = in1.clone().mul(x).div(y);
                     } else if is_cash_token(pool.token1) {
-                        in0_eth = reserves
-                            .token1_rate(coin0.decimals, coin1.decimals)
-                            .mul(&in0)
-                            .with_scale(0)
-                            .into_bigint_and_exponent()
-                            .0;
+                        in0_eth = in0.clone().mul(y).div(x);
                         in1_eth = in1.clone();
                     }
                     log::info!(
@@ -462,29 +454,21 @@ mod tests {
         let reserves = Reserves {
             pool: &pool,
             block_number: 1,
-            x: U256::from(2000),
-            y: U256::from(10),
+            x: U256::from_str_radix("33044264430781", 10).unwrap(),
+            y: U256::from_str_radix("16632437277688007258761", 10).unwrap(),
         };
-        let coin0 = Coin {
-            contract_address: [0; 20].into(),
-            name: "".to_owned(),
-            symbol: "".to_owned(),
-            decimals: 0,
-        };
-        let coin1 = Coin {
-            contract_address: [0; 20].into(),
-            name: "".to_owned(),
-            symbol: "".to_owned(),
-            decimals: 1,
-        };
-        let in0 = BigInt::from(1000);
-        let in0_eth = reserves
-            .token0_rate(coin0.decimals, coin1.decimals)
-            .mul(&in0)
-            .with_scale(0)
-            .into_bigint_and_exponent()
-            .0;
 
-        assert_eq!(in0_eth, BigInt::from(5))
+        let x = BigInt::from_str_radix(&reserves.x.to_string(), 10).unwrap();
+        let y = BigInt::from_str_radix(&reserves.y.to_string(), 10).unwrap();
+
+        let in0 = BigInt::from_str_radix("1200000000", 10).unwrap();
+        let yx = y.clone().div(x.clone());
+        println!("x{} y{} y/x{}", &x, &y, &yx);
+        let in0_eth = in0.clone().mul(yx);
+
+        assert_eq!(
+            in0_eth,
+            BigInt::from_str_radix("604005720116248332", 10).unwrap()
+        )
     }
 }
