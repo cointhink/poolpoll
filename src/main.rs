@@ -103,7 +103,9 @@ fn process_logs_and_mark_block(
         Ok(_) => {
             // mark block as visited
             db.q(block.to_upsert_sql());
+            log::info!("block {} processing completed and marked.", block.number);
             db.client.commit().unwrap();
+            log::info!("block {} sql tx committed.", block.number);
         }
         Err(e) => {
             db.client.rollback().unwrap();
