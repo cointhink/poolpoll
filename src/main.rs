@@ -54,6 +54,11 @@ fn tail(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u32) {
         let db_block_number = InfuraBlock::last_db_block_number(&mut db).unwrap_or(
             last_block_number - (60 / 12 * 60 * 24), // start 1 day in eth blocks ago
         );
+        log::info!(
+            "tail db_block_number {} geth_block_number {}",
+            db_block_number,
+            geth_block_number
+        );
         if db_block_number < geth_block_number {
             let fetch_block_number = db_block_number + 1;
             match geth.block(fetch_block_number) {
