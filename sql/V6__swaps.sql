@@ -12,3 +12,5 @@ CREATE TABLE IF NOT EXISTS swaps (
   out1 DECIMAL
 );
 
+create index IF NOT EXISTS swaps_block_number on swaps (block_number);
+
