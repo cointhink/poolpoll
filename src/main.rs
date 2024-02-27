@@ -205,9 +205,9 @@ fn process_swap(
             let out0 = BigInt::from_str_radix(&log.data[130..194], 16).unwrap();
             let out1 = BigInt::from_str_radix(&log.data[194..258], 16).unwrap();
             let pool = uniswap::v2::Pool::from(&row);
+            let mut in0_eth: Option<BigInt> = None;
+            let mut in1_eth: Option<BigInt> = None;
             let sql = uniswap::v2::Reserves::find_by_pool(&pool);
-            let mut in0_eth = BigInt::default();
-            let mut in1_eth = BigInt::default();
             match db.first(sql) {
                 Some(row) => {
                     let reserves = uniswap::v2::Reserves::from_row(&row, &pool);
@@ -222,32 +222,40 @@ fn process_swap(
                     let x = BigInt::from_str_radix(&reserves.x.to_string(), 10).unwrap();
                     let y = BigInt::from_str_radix(&reserves.y.to_string(), 10).unwrap();
                     if is_cash_token(pool.token0) {
-                        in0_eth = in0.clone();
+                        in0_eth = Some(in0.clone());
                         if y > BigInt::from(0) {
-                            in1_eth = in1.clone().mul(x).div(y);
+                            in1_eth = Some(in1.clone().mul(x).div(y));
                         }
                     } else if is_cash_token(pool.token1) {
                         if x > BigInt::from(0) {
-                            in0_eth = in0.clone().mul(y).div(x);
+                            in0_eth = Some(in0.clone().mul(y).div(x));
                         }
-                        in1_eth = in1.clone();
+                        in1_eth = Some(in1.clone());
                     }
+                    let token0_rate = match reserves.token0_rate(coin0.decimals, coin1.decimals) {
+                        Some(rate) => rate.to_string(),
+                        None => "-".to_owned(),
+                    };
+                    let token1_rate = match reserves.token1_rate(coin0.decimals, coin1.decimals) {
+                        Some(rate) => rate.to_string(),
+                        None => "-".to_owned(),
+                    };
                     log::info!(
                         "reserves block {} coin0_decimals {} coin1_decimals {} token0_rate {:.8} token1_rate {:.8}",
                         reserves.block_number,
                         coin0.decimals,
                         coin1.decimals,
-                        reserves.token0_rate(coin0.decimals, coin1.decimals),
-                        reserves.token1_rate(coin0.decimals, coin1.decimals)
+                        token0_rate,
+                        token1_rate,
                         );
                 }
                 None => log::info!(
-                    "Warning: swap processed with no reserves available for pool {}",
+                    "Warning: swap recorded with no reserves available for pool {}",
                     pool.contract_address
                 ),
             }
             log::info!(
-                "#{} log swap pool {} tx {:0>3} swap in0 {} in0_eth {} in1_eth {} in1 {} out0 {} out1 {}",
+                "#{} log swap pool {} tx {:0>3} swap in0 {} in0_eth {:?} in1 {} in1_eth {:?} out0 {} out1 {}",
                 block_number,
                 log.address.strip_prefix("0x").unwrap(),
                 log.transaction_index,

@@ -86,9 +86,9 @@ pub mod v2 {
         pub block_number: u128,
         pub transaction_index: u32,
         pub in0: BigInt,
-        pub in0_eth: BigInt,
+        pub in0_eth: Option<BigInt>,
         pub in1: BigInt,
-        pub in1_eth: BigInt,
+        pub in1_eth: Option<BigInt>,
         pub out0: BigInt,
         pub out1: BigInt,
     }
@@ -167,12 +167,20 @@ pub mod v2 {
             )
         }
 
-        pub fn token0_rate(&self, x_decimals: u32, y_decimals: u32) -> BigDecimal {
-            Self::u256_div_u256(self.x, x_decimals, self.y, y_decimals)
+        pub fn token0_rate(&self, x_decimals: u32, y_decimals: u32) -> Option<BigDecimal> {
+            if self.y > U256::from(0) {
+                Some(Self::u256_div_u256(self.x, x_decimals, self.y, y_decimals))
+            } else {
+                None
+            }
         }
 
-        pub fn token1_rate(&self, x_decimals: u32, y_decimals: u32) -> BigDecimal {
-            Self::u256_div_u256(self.y, y_decimals, self.x, x_decimals)
+        pub fn token1_rate(&self, x_decimals: u32, y_decimals: u32) -> Option<BigDecimal> {
+            if self.x > U256::from(0) {
+                Some(Self::u256_div_u256(self.y, y_decimals, self.x, x_decimals))
+            } else {
+                None
+            }
         }
 
         fn u256_div_u256(a: U256, a_decimals: u32, b: U256, b_decimals: u32) -> BigDecimal {
@@ -234,9 +242,9 @@ pub mod v2 {
                     Box::new(self.block_number as i32),
                     Box::new(self.transaction_index as i32),
                     Box::new(PgNumeric::new(Some(self.in0.clone().into()))),
-                    Box::new(PgNumeric::new(Some(self.in0_eth.clone().into()))),
+                    Box::new(PgNumeric::new(self.in0_eth.clone().map(|d| d.into()))),
                     Box::new(PgNumeric::new(Some(self.in1.clone().into()))),
-                    Box::new(PgNumeric::new(Some(self.in1_eth.clone().into()))),
+                    Box::new(PgNumeric::new(self.in1_eth.clone().map(|d| d.into()))),
                     Box::new(PgNumeric::new(Some(self.out0.clone().into()))),
                     Box::new(PgNumeric::new(Some(self.out1.clone().into()))),
                 ],
