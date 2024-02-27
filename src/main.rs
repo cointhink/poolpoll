@@ -205,8 +205,8 @@ fn process_swap(
             let out0 = BigInt::from_str_radix(&log.data[130..194], 16).unwrap();
             let out1 = BigInt::from_str_radix(&log.data[194..258], 16).unwrap();
             let pool = uniswap::v2::Pool::from(&row);
-            let mut in0_eth: Option<BigInt> = None;
-            let mut in1_eth: Option<BigInt> = None;
+            let mut in0_eth = BigInt::from(0);
+            let mut in1_eth = BigInt::from(0);
             let sql = uniswap::v2::Reserves::find_by_pool(&pool);
             match db.first(sql) {
                 Some(row) => {
@@ -222,15 +222,19 @@ fn process_swap(
                     let x = BigInt::from_str_radix(&reserves.x.to_string(), 10).unwrap();
                     let y = BigInt::from_str_radix(&reserves.y.to_string(), 10).unwrap();
                     if is_cash_token(pool.token0) {
-                        in0_eth = Some(in0.clone());
-                        if y > BigInt::from(0) {
-                            in1_eth = Some(in1.clone().mul(x).div(y));
-                        }
+                        in0_eth = in0.clone();
+                        in1_eth = if y > BigInt::from(0) {
+                            in1.clone().mul(x).div(y)
+                        } else {
+                            BigInt::from(0)
+                        };
                     } else if is_cash_token(pool.token1) {
-                        if x > BigInt::from(0) {
-                            in0_eth = Some(in0.clone().mul(y).div(x));
-                        }
-                        in1_eth = Some(in1.clone());
+                        in0_eth = if x > BigInt::from(0) {
+                            in0.clone().mul(y).div(x)
+                        } else {
+                            BigInt::from(0)
+                        };
+                        in1_eth = in1.clone();
                     }
                     let token0_rate = match reserves.token0_rate(coin0.decimals, coin1.decimals) {
                         Some(rate) => rate.to_string(),
