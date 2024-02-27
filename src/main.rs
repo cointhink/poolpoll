@@ -223,19 +223,23 @@ fn process_swap(
                     let y = BigInt::from_str_radix(&reserves.y.to_string(), 10).unwrap();
                     if is_cash_token(pool.token0) {
                         in0_eth = in0.clone();
-                        in1_eth = in1.clone().mul(x).div(y);
+                        if y > BigInt::from(0) {
+                            in1_eth = in1.clone().mul(x).div(y);
+                        }
                     } else if is_cash_token(pool.token1) {
-                        in0_eth = in0.clone().mul(y).div(x);
+                        if x > BigInt::from(0) {
+                            in0_eth = in0.clone().mul(y).div(x);
+                        }
                         in1_eth = in1.clone();
                     }
                     log::info!(
-                "reserves block {} coin0_decimals {} coin1_decimals {} token0_rate {:.8} token1_rate {:.8}",
-                reserves.block_number,
-                coin0.decimals,
-                coin1.decimals,
-                reserves.token0_rate(coin0.decimals, coin1.decimals),
-                reserves.token1_rate(coin0.decimals, coin1.decimals)
-            );
+                        "reserves block {} coin0_decimals {} coin1_decimals {} token0_rate {:.8} token1_rate {:.8}",
+                        reserves.block_number,
+                        coin0.decimals,
+                        coin1.decimals,
+                        reserves.token0_rate(coin0.decimals, coin1.decimals),
+                        reserves.token1_rate(coin0.decimals, coin1.decimals)
+                        );
                 }
                 None => log::info!(
                     "Warning: swap processed with no reserves available for pool {}",
