@@ -6,6 +6,7 @@ use crate::coin::Coin;
 use crate::erc20::Erc20;
 use crate::geth::{InfuraBlock, InfuraLog};
 use crate::sql::Ops;
+use crate::uniswap::v2::SwapCall;
 use ethereum_types::{Address, U256};
 use num_traits::Num;
 use pg_bigdecimal::BigInt;
@@ -197,13 +198,10 @@ fn process_swap(
     log: &InfuraLog,
     block_number: u32,
 ) -> Result<(), Box<dyn Error>> {
+    let swap_call = SwapCall::from(log);
     let sql = uniswap::v2::Pool::find_by_contract_address(log.address.as_str().into());
     match db.first(sql) {
         Some(row) => {
-            let in0 = BigInt::from_str_radix(&log.data[2..66], 16).unwrap();
-            let in1 = BigInt::from_str_radix(&log.data[66..130], 16).unwrap();
-            let out0 = BigInt::from_str_radix(&log.data[130..194], 16).unwrap();
-            let out1 = BigInt::from_str_radix(&log.data[194..258], 16).unwrap();
             let pool = uniswap::v2::Pool::from(&row);
             let mut in0_eth = BigInt::from(0);
             let mut in1_eth = BigInt::from(0);
@@ -222,19 +220,19 @@ fn process_swap(
                     let x = BigInt::from_str_radix(&reserves.x.to_string(), 10).unwrap();
                     let y = BigInt::from_str_radix(&reserves.y.to_string(), 10).unwrap();
                     if is_cash_token(pool.token0) {
-                        in0_eth = in0.clone();
+                        in0_eth = swap_call.in0.clone();
                         in1_eth = if y > BigInt::from(0) {
-                            in1.clone().mul(x).div(y)
+                            swap_call.in1.clone().mul(x).div(y)
                         } else {
                             BigInt::from(0)
                         };
                     } else if is_cash_token(pool.token1) {
                         in0_eth = if x > BigInt::from(0) {
-                            in0.clone().mul(y).div(x)
+                            swap_call.in0.clone().mul(y).div(x)
                         } else {
                             BigInt::from(0)
                         };
-                        in1_eth = in1.clone();
+                        in1_eth = swap_call.in1.clone();
                     }
                     let token0_rate = match reserves.token0_rate(coin0.decimals, coin1.decimals) {
                         Some(rate) => rate.to_string(),
@@ -263,23 +261,20 @@ fn process_swap(
                 block_number,
                 log.address.strip_prefix("0x").unwrap(),
                 log.transaction_index,
-                in0,
+                swap_call.in0,
                 in0_eth,
-                in1,
+                swap_call.in1,
                 in1_eth,
-                out0,
-                out1
+                swap_call.out0,
+                swap_call.out1
             );
             let swap = uniswap::v2::Swap {
                 pool: &pool,
                 block_number: block_number as u128,
                 transaction_index: log.transaction_index,
-                in0,
                 in0_eth,
-                in1,
                 in1_eth,
-                out0,
-                out1,
+                call: swap_call,
             };
             db.q(swap.to_upsert_sql());
         }

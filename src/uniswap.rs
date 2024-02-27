@@ -3,11 +3,13 @@ pub mod v3 {
 }
 
 pub mod v2 {
+    use crate::geth::InfuraLog;
     use crate::{geth::Client, sql::SqlQuery};
     use ethabi::token::Token;
     use ethabi::Contract;
     use ethereum_types::{Address, U256};
     use num_bigint::Sign;
+    use num_traits::Num;
     use pg_bigdecimal::{BigDecimal, BigInt, PgNumeric};
     use postgres::types::private::BytesMut;
     use postgres::types::{IsNull, Type};
@@ -85,12 +87,32 @@ pub mod v2 {
         pub pool: &'a Pool,
         pub block_number: u128,
         pub transaction_index: u32,
-        pub in0: BigInt,
         pub in0_eth: BigInt,
-        pub in1: BigInt,
         pub in1_eth: BigInt,
+        pub call_params: SwapCall,
+    }
+
+    #[derive(Debug)]
+    pub(crate) struct SwapCall {
+        pub in0: BigInt,
+        pub in1: BigInt,
         pub out0: BigInt,
         pub out1: BigInt,
+    }
+
+    impl From<&InfuraLog> for SwapCall {
+        fn from(value: &InfuraLog) -> Self {
+            let in0 = BigInt::from_str_radix(&value.data[2..66], 16).unwrap();
+            let in1 = BigInt::from_str_radix(&value.data[66..130], 16).unwrap();
+            let out0 = BigInt::from_str_radix(&value.data[130..194], 16).unwrap();
+            let out1 = BigInt::from_str_radix(&value.data[194..258], 16).unwrap();
+            SwapCall {
+                in0,
+                in1,
+                out0,
+                out1,
+            }
+        }
     }
 
     impl Pool {
@@ -241,12 +263,12 @@ pub mod v2 {
                     Box::new(format!("{:x}", self.pool.contract_address)),
                     Box::new(self.block_number as i32),
                     Box::new(self.transaction_index as i32),
-                    Box::new(PgNumeric::new(Some(self.in0.clone().into()))),
+                    Box::new(PgNumeric::new(Some(self.call_params.in0.clone().into()))),
                     Box::new(PgNumeric::new(Some(self.in0_eth.clone().into()))),
-                    Box::new(PgNumeric::new(Some(self.in1.clone().into()))),
+                    Box::new(PgNumeric::new(Some(self.call_params.in1.clone().into()))),
                     Box::new(PgNumeric::new(Some(self.in1_eth.clone().into()))),
-                    Box::new(PgNumeric::new(Some(self.out0.clone().into()))),
-                    Box::new(PgNumeric::new(Some(self.out1.clone().into()))),
+                    Box::new(PgNumeric::new(Some(self.call_params.out0.clone().into()))),
+                    Box::new(PgNumeric::new(Some(self.call_params.out1.clone().into()))),
                 ],
             )
         }
