@@ -95,7 +95,10 @@ fn tail(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u32) {
             }
         }
         if db_block_number > geth_block_number {
-            panic!("impossibru!")
+            panic!(
+                "number impossibru! db_block_number {} > geth_block_number {}",
+                db_block_number, geth_block_number
+            )
         }
     }
 }
