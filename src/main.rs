@@ -277,7 +277,7 @@ fn process_swap(
                 transaction_index: log.transaction_index,
                 in0_eth,
                 in1_eth,
-                call: swap_call,
+                call_params: swap_call,
             };
             db.q(swap.to_upsert_sql());
         }
