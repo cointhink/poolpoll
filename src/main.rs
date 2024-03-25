@@ -212,14 +212,14 @@ fn process_swap(
             match db.first(sql) {
                 Some(row) => {
                     let reserves = uniswap::v2::Reserves::from_row(&row, &pool);
-                    let row = db
-                        .first(Coin::find_by_contract_address((&pool.token0).into()))
-                        .unwrap();
-                    let coin0: Coin = (&row).into();
-                    let row = db
-                        .first(Coin::find_by_contract_address((&pool.token1).into()))
-                        .unwrap();
-                    let coin1: Coin = (&row).into();
+                    let coin0 = Coin::from(
+                        &db.first(Coin::find_by_contract_address((&pool.token0).into()))
+                            .unwrap(),
+                    );
+                    let coin1 = Coin::from(
+                        &db.first(Coin::find_by_contract_address((&pool.token1).into()))
+                            .unwrap(),
+                    );
                     let x = BigInt::from_str_radix(&reserves.x.to_string(), 10).unwrap();
                     let y = BigInt::from_str_radix(&reserves.y.to_string(), 10).unwrap();
                     if is_cash_token(pool.token0) {
