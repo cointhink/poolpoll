@@ -83,9 +83,9 @@ fn tail(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u32) {
             }
         }
         // are we caught up?
-        if db_block_number == geth_block_number {
+        if db_block_number >= geth_block_number {
             geth_block_number = geth.last_block_number();
-            if db_block_number == geth_block_number {
+            if db_block_number >= geth_block_number {
                 log::info!(
                     "sleeping 10 sec at db #{} eth #{}",
                     db_block_number,
@@ -93,12 +93,6 @@ fn tail(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u32) {
                 );
                 thread::sleep(Duration::from_secs(10)); // then sleep
             }
-        }
-        if db_block_number > geth_block_number {
-            panic!(
-                "number impossibru! db_block_number {} > geth_block_number {}",
-                db_block_number, geth_block_number
-            )
         }
     }
 }
