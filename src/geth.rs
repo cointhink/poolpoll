@@ -102,7 +102,9 @@ impl Client {
                     )))
                 }
             }
-            RpcResultTypes::Error(_) => todo!(),
+            RpcResultTypes::Error(err) => {
+                Err(Box::from(format!("geth.block: RPC Error {:?}", err)))
+            }
         }
     }
 
