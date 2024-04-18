@@ -66,9 +66,10 @@ fn tail(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u32) {
                 Ok(block) => match geth.logs(fetch_block_number) {
                     Ok(logs) => {
                         process_logs_and_mark_block(geth, db, fetch_block_number, logs, &block);
+                        let elapsed_secs = started.elapsed().as_secs_f32();
                         log::info!(
-                            "processed in {} seconds. db #{}. eth #{}. {} blocks / {} behind.",
-                            started.elapsed().as_secs(),
+                            "processed in {:.1} seconds. db #{}. eth #{}. {} blocks / {} behind.",
+                            elapsed_secs,
                             db_block_number,
                             geth_block_number,
                             geth_block_number - db_block_number,
@@ -180,10 +181,10 @@ fn process_sync(
         U256::from_str_radix(&log.data[66..130], 16).unwrap(),
     );
     log::info!(
-        "#{} log sync pool {} tx {:0>3} reserves {:?}",
+        "#{} tx {:0>3} log sync() pool {} reserves {:?}",
         fetch_block_number,
-        log.address.strip_prefix("0x").unwrap(),
         log.transaction_index,
+        log.address.strip_prefix("0x").unwrap(),
         reserves,
     );
     update_pool_reserves(db, &pool, fetch_block_number, reserves)?;
@@ -206,14 +207,6 @@ fn process_swap(
             match db.first(sql) {
                 Some(row) => {
                     let reserves = uniswap::v2::Reserves::from_row(&row, &pool);
-                    let coin0 = Coin::from(
-                        &db.first(Coin::find_by_contract_address((&pool.token0).into()))
-                            .unwrap(),
-                    );
-                    let coin1 = Coin::from(
-                        &db.first(Coin::find_by_contract_address((&pool.token1).into()))
-                            .unwrap(),
-                    );
                     let x = BigInt::from_str_radix(&reserves.x.to_string(), 10).unwrap();
                     let y = BigInt::from_str_radix(&reserves.y.to_string(), 10).unwrap();
                     if is_cash_token(pool.token0) {
@@ -231,22 +224,6 @@ fn process_swap(
                         };
                         in1_eth = swap_call.in1.clone();
                     }
-                    let token0_rate = match reserves.token0_rate(coin0.decimals, coin1.decimals) {
-                        Some(rate) => rate.to_string(),
-                        None => "-".to_owned(),
-                    };
-                    let token1_rate = match reserves.token1_rate(coin0.decimals, coin1.decimals) {
-                        Some(rate) => rate.to_string(),
-                        None => "-".to_owned(),
-                    };
-                    log::info!(
-                        "reserves block {} coin0_decimals {} coin1_decimals {} token0_rate {:.8} token1_rate {:.8}",
-                        reserves.block_number,
-                        coin0.decimals,
-                        coin1.decimals,
-                        token0_rate,
-                        token1_rate,
-                        );
                 }
                 None => log::info!(
                     "Warning: swap recorded with no reserves available for pool {}",
@@ -254,10 +231,10 @@ fn process_swap(
                 ),
             }
             log::info!(
-                "#{} log swap pool {} tx {:0>3} swap in0 {} in0_eth {:?} in1 {} in1_eth {:?} out0 {} out1 {}",
+                "#{} tx {:0>3} log swap pool {} swap in0 {} in0_eth {:?} in1 {} in1_eth {:?} out0 {} out1 {}",
                 block_number,
-                log.address.strip_prefix("0x").unwrap(),
                 log.transaction_index,
+                log.address.strip_prefix("0x").unwrap(),
                 swap_call.in0,
                 in0_eth,
                 swap_call.in1,
