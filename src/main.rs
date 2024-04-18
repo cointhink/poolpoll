@@ -111,7 +111,6 @@ fn process_logs_and_mark_block(
             // mark block as visited
             db.q(block.to_upsert_sql());
             db.client.commit().unwrap();
-            log::info!("block {} sql tx committed.", block.number);
         }
         Err(e) => {
             db.client.rollback().unwrap();
@@ -158,7 +157,7 @@ fn process_logs(
         }
     }
     log::info!(
-        "[#{}] {} logs. {} erc20 transfer logs. uniswap {} swaps {} syncs",
+        "#{} {} logs. {} erc20 transfer logs. uniswap {} swaps {} syncs",
         fetch_block_number,
         logs.len(),
         topic_transfer_count,
