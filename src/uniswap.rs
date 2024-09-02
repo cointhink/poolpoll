@@ -8,9 +8,8 @@ pub mod v2 {
     use ethabi::token::Token;
     use ethabi::Contract;
     use ethereum_types::{Address, U256};
-    use num_bigint::Sign;
     use num_traits::Num;
-    use pg_bigdecimal::{BigDecimal, BigInt, PgNumeric};
+    use pg_bigdecimal::{BigInt, PgNumeric};
     use postgres::types::private::BytesMut;
     use postgres::types::{IsNull, Type};
     use sql_query_builder as sql;
@@ -189,28 +188,6 @@ pub mod v2 {
             )
         }
 
-        pub fn token0_rate(&self, x_decimals: u32, y_decimals: u32) -> Option<BigDecimal> {
-            if self.y > U256::from(0) {
-                Some(Self::u256_div_u256(self.x, x_decimals, self.y, y_decimals))
-            } else {
-                None
-            }
-        }
-
-        pub fn token1_rate(&self, x_decimals: u32, y_decimals: u32) -> Option<BigDecimal> {
-            if self.x > U256::from(0) {
-                Some(Self::u256_div_u256(self.y, y_decimals, self.x, x_decimals))
-            } else {
-                None
-            }
-        }
-
-        fn u256_div_u256(a: U256, a_decimals: u32, b: U256, b_decimals: u32) -> BigDecimal {
-            let big_a = u256_to_bigint(a);
-            let big_b = u256_to_bigint(b);
-            BigDecimal::new(big_a, a_decimals as i64) / BigDecimal::new(big_b, b_decimals as i64)
-        }
-
         pub fn from_row(row: &postgres::Row, pool: &'a Pool) -> Self {
             Reserves {
                 pool: pool,
@@ -219,12 +196,6 @@ pub mod v2 {
                 block_number: row.get::<_, i32>("block_number") as u128,
             }
         }
-    }
-
-    fn u256_to_bigint(a: U256) -> BigInt {
-        let mut a_bytes: [u8; 32] = [0; 32];
-        a.to_little_endian(&mut a_bytes);
-        BigInt::from_bytes_le(Sign::Plus, &a_bytes)
     }
 
     impl crate::sql::Ops for Reserves<'_> {
