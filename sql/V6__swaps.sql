@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS swaps (
   block_number Int4,
   block_hash VARCHAR(64),
   transaction_index Int4,
-  transaction_hash VARCHAR(64),
+  transaction_hash VARCHAR(64), /* redundant to block_number + transaction_index */
   in0 DECIMAL,
   in0_eth DECIMAL,
   in1 DECIMAL,
