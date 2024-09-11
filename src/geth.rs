@@ -47,13 +47,6 @@ impl Client {
             )
             .into()),
             Ok(tokens) => {
-                log::info!(
-                    "geth call {}({:?})@{} => {:?}",
-                    function_name,
-                    function_params,
-                    to_hex,
-                    tokens
-                );
                 Ok(tokens)
             }
         }
