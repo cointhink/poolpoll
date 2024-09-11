@@ -18,6 +18,7 @@ pub mod v2 {
 
     const UNISWAP_FACTORY: &str = "5c69bee701ef814a2b6a3edd4b1652cb9cc5aa6f";
     pub static ABI: OnceLock<Contract> = OnceLock::new();
+    // Swap(address,uint256,uint256,uint256,uint256,address) 	0xd78ad95f
     pub const TOPIC_SWAP: &str =
         "0xd78ad95fa46c994b6551d0da85fc275fe613ce37657fb8d5e3d130840159d822";
     pub const TOPIC_SYNC: &str =
