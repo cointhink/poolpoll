@@ -35,26 +35,45 @@ fn main() {
         .set(ethabi::Contract::load(abi_file).unwrap())
         .unwrap();
 
-    let last_block_number = geth.last_block_number();
-    log::info!("ethereum mainnet latest block #{}", last_block_number);
+    let last_chain_block_number = geth.last_block_number();
+    log::info!("ethereum mainnet latest block #{}", last_chain_block_number);
+    let first_db_block_number = InfuraBlock::last_db_block_number(&mut sql, false).unwrap();
+    let last_db_block_number = InfuraBlock::last_db_block_number(&mut sql, true).unwrap_or(
+        last_chain_block_number - (60 / 12 * 60 * 24), // start 1 day in eth blocks ago
+    );
+    let db_block_range = last_db_block_number - first_db_block_number;
+    log::info!(
+        "db block range #{} - #{} = {} blocks ({:.4} days)",
+        first_db_block_number,
+        last_db_block_number,
+        db_block_range,
+        db_block_range as f32 * 12.0 / 60.0 / 60.0 / 60.0
+    );
     if std::env::args().find(|arg| arg == "discover").is_some() {
         discover(&geth, &mut sql);
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
-        refresh(&geth, &mut sql, last_block_number);
+        refresh(&geth, &mut sql, last_chain_block_number);
     } else if std::env::args().find(|arg| arg == "tail").is_some() {
-        tail(&geth, &mut sql, last_block_number);
+        tail(
+            &geth,
+            &mut sql,
+            last_db_block_number,
+            last_chain_block_number,
+        );
     } else {
         log::info!("commands: discover, refresh, tail")
     }
 }
 
-fn tail(geth: &geth::Client, mut db: &mut sql::Client, last_block_number: u32) {
-    let mut geth_block_number = last_block_number;
+fn tail(
+    geth: &geth::Client,
+    db: &mut sql::Client,
+    db_block_number: u32,
+    last_chain_block_number: u32,
+) {
+    let mut geth_block_number = last_chain_block_number;
     loop {
         let started = std::time::Instant::now();
-        let db_block_number = InfuraBlock::last_db_block_number(&mut db).unwrap_or(
-            last_block_number - (60 / 12 * 60 * 24), // start 1 day in eth blocks ago
-        );
         log::info!(
             "tail db_block_number {} geth_block_number {}",
             db_block_number,

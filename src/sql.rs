@@ -9,8 +9,8 @@ pub trait Ops {
 }
 
 impl dyn Ops {
-    pub fn last_column(table_name: &str, column_name: &str) -> SqlQuery {
-        let sort_order = "desc";
+    pub fn last_column(table_name: &str, column_name: &str, desc: bool) -> SqlQuery {
+        let sort_order = if desc { "desc" } else { "asc" };
         let select = sql::Select::new()
             .select(column_name)
             .from(table_name)

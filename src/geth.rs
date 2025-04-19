@@ -46,9 +46,7 @@ impl Client {
                 function_name, function_params, to_hex, err, output_no_0x
             )
             .into()),
-            Ok(tokens) => {
-                Ok(tokens)
-            }
+            Ok(tokens) => Ok(tokens),
         }
     }
 
@@ -295,15 +293,15 @@ pub struct InfuraBlock {
 }
 
 impl InfuraBlock {
-    pub fn last_db_block_number(db: &mut crate::sql::Client) -> Option<u32> {
-        let sql = Self::last_block_number_sql();
+    pub fn last_db_block_number(db: &mut crate::sql::Client, descend: bool) -> Option<u32> {
+        let sql = Self::last_block_number_sql(descend);
         match db.q_last(sql) {
             Some(row) => Some(row.get::<&str, i32>("number") as u32),
             None => None,
         }
     }
-    fn last_block_number_sql() -> crate::sql::SqlQuery {
-        <dyn crate::Ops>::last_column("blocks", "number")
+    fn last_block_number_sql(descend: bool) -> crate::sql::SqlQuery {
+        <dyn crate::Ops>::last_column("blocks", "number", descend)
     }
 }
 
