@@ -67,30 +67,30 @@ fn main() {
 fn tail(
     geth: &geth::Client,
     db: &mut sql::Client,
-    db_block_number: u32,
-    last_chain_block_number: u32,
+    mut db_block_number: u32,
+    mut last_chain_block_number: u32,
 ) {
-    let mut geth_block_number = last_chain_block_number;
     loop {
         let started = std::time::Instant::now();
         log::info!(
-            "tail db_block_number {} geth_block_number {}",
+            "tail db_block_number {} chain_block_number {}",
             db_block_number,
-            geth_block_number
+            last_chain_block_number
         );
-        if db_block_number < geth_block_number {
+        if db_block_number < last_chain_block_number {
             let fetch_block_number = db_block_number + 1;
             match geth.block(fetch_block_number) {
                 Ok(block) => match geth.logs(fetch_block_number) {
                     Ok(logs) => {
                         process_logs_and_mark_block(geth, db, fetch_block_number, logs, &block);
                         let elapsed_secs = started.elapsed().as_secs_f32();
+                        db_block_number = InfuraBlock::last_db_block_number(db, true).unwrap();
                         log::info!(
                             "processed in {:.1} seconds. db #{}. eth #{}. {} blocks / {} behind.",
                             elapsed_secs,
                             db_block_number,
-                            geth_block_number,
-                            geth_block_number - db_block_number,
+                            last_chain_block_number,
+                            last_chain_block_number - db_block_number,
                             elapsed_in_words(seconds_since_block(&block)),
                         );
                     }
@@ -101,14 +101,15 @@ fn tail(
                 Err(e) => log::info!("tail_from eth block get failed {:?}", e),
             }
         }
+
         // are we caught up?
-        if db_block_number >= geth_block_number {
-            geth_block_number = geth.last_block_number();
-            if db_block_number >= geth_block_number {
+        if db_block_number >= last_chain_block_number {
+            last_chain_block_number = geth.last_block_number();
+            if db_block_number >= last_chain_block_number {
                 log::info!(
                     "sleeping 10 sec at db #{} eth #{}",
                     db_block_number,
-                    geth_block_number
+                    last_chain_block_number
                 );
                 thread::sleep(Duration::from_secs(10)); // then sleep
             }
