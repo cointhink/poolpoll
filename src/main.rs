@@ -54,12 +54,11 @@ fn main() {
     } else if std::env::args().find(|arg| arg == "refresh").is_some() {
         refresh(&geth, &mut sql, last_chain_block_number);
     } else if std::env::args().find(|arg| arg == "tail").is_some() {
-        tail(
-            &geth,
-            &mut sql,
-            last_db_block_number,
-            last_chain_block_number,
-        );
+        let mut start_block = last_db_block_number;
+        if std::env::args().find(|arg| arg == "--latest").is_some() {
+            start_block = last_chain_block_number;
+        }
+        tail(&geth, &mut sql, start_block, last_chain_block_number);
     } else {
         log::info!("commands: discover, refresh, tail")
     }
