@@ -37,10 +37,10 @@ fn main() {
 
     let last_chain_block_number = geth.last_block_number();
     log::info!("ethereum mainnet latest block #{}", last_chain_block_number);
-    let first_db_block_number = InfuraBlock::last_db_block_number(&mut sql, false).unwrap();
-    let last_db_block_number = InfuraBlock::last_db_block_number(&mut sql, true).unwrap_or(
-        last_chain_block_number - (60 / 12 * 60 * 24), // start 1 day in eth blocks ago
-    );
+    let first_db_block_number =
+        InfuraBlock::last_db_block_number(&mut sql, false).unwrap_or(last_chain_block_number);
+    let last_db_block_number =
+        InfuraBlock::last_db_block_number(&mut sql, true).unwrap_or(last_chain_block_number);
     let db_block_range = last_db_block_number - first_db_block_number;
     log::info!(
         "db block range #{} - #{} = {} blocks ({:.4} days)",
