@@ -19,9 +19,10 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn build(url: &str, key: &str) -> Client {
-        let url = format!("{}/{}", url, key);
-        Client { url }
+    pub fn build(url: &str) -> Client {
+        Client {
+            url: url.to_owned(),
+        }
     }
 
     pub fn eth_call(

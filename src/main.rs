@@ -29,7 +29,7 @@ fn main() {
     let config = config::CONFIG.get().unwrap();
     let mut sql = sql::new();
 
-    let geth = geth::Client::build(&config.geth_url, &config.infura_key);
+    let geth = geth::Client::build(&config.geth_url);
     let abi_file = std::fs::File::open("abi/ERC20.json").unwrap();
     erc20::ABI
         .set(ethabi::Contract::load(abi_file).unwrap())
